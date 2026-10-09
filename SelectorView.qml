@@ -62,7 +62,9 @@ FocusScope {
             onStreamFinished: {
                 let list = []
                 try { list = JSON.parse(text) } catch (e) {}
-                const keep = view.cur ? view.cur.slug : ""
+                // on opening, land on the running theme; after an apply, stay put
+                const keep = view.landOnCurrent ? "" : (view.cur ? view.cur.slug : "")
+                view.landOnCurrent = false
                 view.themes = list
                 // land on the same theme again, or else the active one
                 let i = keep ? view.shown.findIndex(t => t.slug === keep) : -1
@@ -72,6 +74,7 @@ FocusScope {
             }
         }
     }
+    property bool landOnCurrent: true
     property string query: ""
     readonly property var shown: {
         const q = query.trim().toLowerCase()
@@ -217,6 +220,7 @@ FocusScope {
     // fresh each time it opens
     onActiveChanged: if (active) {
         query = ""
+        landOnCurrent = true
         themeReader.running = true
         forceActiveFocus()
         terminal.scrawl(["> link established :: theme registry", "> " + (themes.length || "scanning") + " palettes on file"])
@@ -556,10 +560,10 @@ FocusScope {
                     readonly property real depth: Math.cos(Math.max(-1.55, Math.min(1.55, th)))
                     readonly property bool isSel: index === view.sel
                     visible: near && depth > 0.05
-                    width: Math.min(300, arc.height * 1.4)
+                    width: Math.min(360, arc.height * 1.2)
                     height: width * 0.62
                     x: arc.width / 2 + Math.sin(th) * arc.width * 0.44 - width / 2
-                    y: (arc.height - height) / 2 + (1 - depth) * 40
+                    y: 10 + (1 - depth) * 40
                     z: depth * 100
                     scale: 0.45 + 0.55 * depth
                     opacity: 0.25 + 0.75 * depth
