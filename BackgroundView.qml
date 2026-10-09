@@ -285,7 +285,7 @@ FocusScope {
                 // the shell's background now decodes the picture and fades it
                 // in (420 ms): go once that's surely done, so the desktop we
                 // glitch out to already shows it
-                outAfterApply.interval = Math.min(1800, 520 + applier.pixels / 30000)
+                outAfterApply.interval = Math.min(2500, 900 + applier.pixels / 20000)
                 outAfterApply.restart()
                 if (code === 0) terminal.push("> letting the backdrop settle...")
             }
