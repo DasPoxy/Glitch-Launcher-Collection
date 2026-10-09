@@ -30,6 +30,10 @@ layout(std140, binding = 0) uniform buf {
     float style;
     float pulse;      // 0..1, brightens briefly (selection change)
     float glyphCount; // glyphs in the atlas; the first two are 0 and 1
+    vec4 doomColor;   // self-destruct: the theme's opposite
+    float doomPulse;  // 0..1, the globe flaring in it
+    float chunk;      // -1 whole; else draw only chunk k of the shattered globe
+    float chunkCount;
 };
 layout(binding = 1) uniform sampler2D land;     // equirectangular, white = land
 layout(binding = 2) uniform sampler2D glyphs;   // white glyphs on black, in a row
@@ -788,16 +792,10 @@ vec4 hexGlobe(vec2 d, float r2) {
     return vec4(col, a);
 }
 
-void main() {
-    vec2 px = qt_TexCoord0 * resolution;
-    vec2 d = (px - center) / radius;
-    d.y = -d.y;
-    float r2 = dot(d, d);
-    if (sid() == 5 || sid() == 6 || sid() == 8) {
-        vec4 o = sid() == 5 ? unicron(d, r2) : sid() == 6 ? dyson(d, r2) : hexGlobe(d, r2);
-        fragColor = vec4(o.rgb, o.a) * qt_Opacity;
-        return;
-    }
+// the globe in its style at d (in globe radii), r2 = |d|^2
+vec4 styled(vec2 d, float r2, vec2 px) {
+    if (sid() == 5 || sid() == 6 || sid() == 8)
+        return sid() == 5 ? unicron(d, r2) : sid() == 6 ? dyson(d, r2) : hexGlobe(d, r2);
     vec3 col = vec3(0.0);
     float a = 0.0;
     if (r2 < 1.0) {
@@ -854,5 +852,52 @@ void main() {
         col += mix(glowColor.rgb, dotColor.rgb, 0.6) * o;
         a = max(a, min(o, 1.0));
     }
-    fragColor = vec4(col, a) * qt_Opacity;
+    return vec4(col, a);
+}
+
+// self-destruct: the globe shatters into chunkCount pieces, cells of the
+// sphere round evenly spread seeds (the same Fibonacci points GlobeView
+// uses to place them)
+vec3 seedDir(float i) {
+    float y = 1.0 - 2.0 * (i + 0.5) / chunkCount;
+    float r = sqrt(max(0.0, 1.0 - y * y));
+    float phi = i * PI * (3.0 - sqrt(5.0));
+    return vec3(cos(phi) * r, y, sin(phi) * r);
+}
+
+void main() {
+    vec2 px = qt_TexCoord0 * resolution;
+    vec2 d = (px - center) / radius;
+    d.y = -d.y;
+    float r2 = dot(d, d);
+    float edgeGlow = 0.0;
+    if (chunk >= 0.0) {
+        // just this chunk: the part of the sphere nearest its seed (on the
+        // far side for a chunk from the back), its broken edge glowing
+        if (r2 >= 1.0) { fragColor = vec4(0.0); return; }
+        float z = sqrt(1.0 - r2);
+        vec3 sv = mat3(rotation) * seedDir(chunk);
+        vec3 m = transpose(mat3(rotation)) * vec3(d, sv.z >= 0.0 ? z : -z);
+        float d1 = 1e9, d2 = 1e9, best = -1.0;
+        for (int i = 0; i < 48; i++) {
+            float fi = float(i);
+            if (fi >= chunkCount) break;
+            float dd = distance(m, seedDir(fi));
+            if (dd < d1) { d2 = d1; d1 = dd; best = fi; } else if (dd < d2) { d2 = dd; }
+        }
+        if (abs(best - chunk) > 0.5) { fragColor = vec4(0.0); return; }
+        edgeGlow = smoothstep(0.06, 0.0, d2 - d1);
+    }
+    vec4 o = styled(d, r2, px);
+    if (doomPulse > 0.0 && r2 < 1.0) {
+        // flaring in the opposite colour, hottest at the rim
+        float z = sqrt(1.0 - r2);
+        o.rgb = mix(o.rgb, doomColor.rgb * (0.6 + 0.8 * pow(1.0 - z, 1.5)), doomPulse * 0.65);
+        o.a = max(o.a, doomPulse * 0.6);
+    }
+    if (chunk >= 0.0) {
+        o.rgb = mix(o.rgb, doomColor.rgb * 1.4 + 0.2, edgeGlow * 0.85);
+        o.a = max(o.a, max(0.85, edgeGlow));               // chunks are solid pieces
+    }
+    fragColor = o * qt_Opacity;
 }

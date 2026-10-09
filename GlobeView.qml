@@ -314,6 +314,17 @@ FocusScope {
     property var proj: []                        // per app: {x, y, sx, sy, z}
     property int selected: -1
     function project() {
+        if (exploded) {
+            const out = []
+            for (let i = 0; i < nodes.length; i++) {
+                const p = debrisSpot(nodes[i], i)
+                out.push({ x: p.x, y: p.y, sx: p.x, sy: p.y, z: p.z })
+            }
+            proj = out
+            const sel = aim >= 0 ? aim : (selected >= 0 && selected < out.length ? selected : 0)
+            if (sel !== selected) { selected = sel; selectPulse.restart() }
+            return
+        }
         const out = [], n = nodes.length
         let best = -1, bestZ = -2
         for (let i = 0; i < n; i++) {
@@ -333,6 +344,21 @@ FocusScope {
             const dt = Math.min(frameTime, 0.05)
             view.driftT += dt
             view.idle += dt
+            if (view.doom) {
+                view.doomT += dt
+                if (view.doom === "countdown") {
+                    const amp = 2 + 16 * Math.pow(view.doomT / view.countdownLength, 2)
+                    view.shakeX = (Math.random() - 0.5) * amp
+                    view.shakeY = (Math.random() - 0.5) * amp * 0.7
+                    const left = Math.ceil(view.countdownLength - view.doomT)
+                    if (left !== view.doomSaid && left <= 3 && left >= 1) { view.doomSaid = left; terminal.push("> " + left) }
+                    if (view.doomT >= view.countdownLength) { view.shakeX = 0; view.shakeY = 0; view.explode() }
+                }
+            }
+            if (view.exploded) {
+                view.project()
+                return
+            }
             if (view.aim >= 0 && !view.dragging) {
                 // turn the aimed app to face you
                 const q = view.apply(view.points[view.aim])
@@ -404,6 +430,7 @@ FocusScope {
             return
         }
         if (k === Qt.Key_Escape) { if (query) query = ""; else if (closeRequest) closeRequest() }
+        else if ((k === Qt.Key_Return || k === Qt.Key_Enter) && query.trim().toLowerCase() === "<namek") { query = ""; selfDestruct() }
         else if (k === Qt.Key_Return || k === Qt.Key_Enter) activate(selected, !!(event.modifiers & Qt.ShiftModifier))
         else if (k === Qt.Key_Left) hop(-1, 0)
         else if (k === Qt.Key_Right) hop(1, 0)
@@ -421,7 +448,7 @@ FocusScope {
         event.accepted = true
     }
     // fresh each time it opens
-    onActiveChanged: if (active) { if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
+    onActiveChanged: if (active) { doom = ""; doomT = 0; doomChunks = []; doomSaid = 0; if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
 
     // --------------------------------------------------------- the readout
     // linger on something for a few seconds and the corner terminal scans it:
@@ -525,6 +552,84 @@ FocusScope {
         }
     }
 
+    // ----------------------------------------------------------- <namek
+    // the secret: "<namek" + Enter. The globe flares in its theme's opposite
+    // colour, pulses ripple off it and the screen shakes harder and harder,
+    // then it explodes - a flash, a shockwave - into chunks of itself (in its
+    // style), and the apps are flung out into the debris field, still there
+    // to pick, until the launcher next opens
+    property string doom: ""             // "", "countdown", "boom" (then the field)
+    property real doomT: 0               // seconds into the phase
+    readonly property real countdownLength: 4.6
+    readonly property bool exploded: doom === "boom"
+    readonly property color doomColor: Qt.hsla((cPrimary.hslHue + 0.5) % 1, Math.max(0.75, cPrimary.hslSaturation), 0.55, 1)
+    readonly property real doomPulse: doom !== "countdown" ? 0
+        : Math.pow(0.5 + 0.5 * Math.sin(doomT * (3 + doomT * 2.6)), 3) * Math.min(1, 0.35 + doomT / countdownLength)
+    property var doomRot: null           // the globe's turn when it blew
+    property var doomChunks: []          // the pieces: where each starts and flies
+    property var doomFrom: ({})          // each app's spot when it blew, by name
+    readonly property int chunkCount: 18
+    property int doomSaid: 0
+    function selfDestruct() {
+        if (doom) return
+        doom = "countdown"
+        doomT = 0
+        aimAt(-1)
+        terminal.scrawl(["> <namek :: command accepted", "> SELF-DESTRUCT SEQUENCE ENGAGED", "> core containment failing"])
+    }
+    function explode() {
+        doomRot = rotation4
+        // the chunks: one per seed (the shader's Fibonacci points), starting
+        // over their part of the globe and flying outward
+        const out = [], R = radius, n = chunkCount, golden = Math.PI * (3 - Math.sqrt(5))
+        for (let i = 0; i < n; i++) {
+            const y = 1 - 2 * (i + 0.5) / n, r = Math.sqrt(Math.max(0, 1 - y * y)), phi = i * golden
+            const q = apply([Math.cos(phi) * r, y, Math.sin(phi) * r])
+            const size = R * 1.2
+            const px = cx + q[0] * R, py = cy - q[1] * R
+            let dx = px - cx, dy = py - cy
+            const len = Math.hypot(dx, dy) || 1
+            const k = Math.random()
+            dx = dx / len + (Math.random() - 0.5) * 0.6; dy = dy / len + (Math.random() - 0.5) * 0.6
+            const dist = Math.min(width, height) * (0.25 + 0.3 * Math.random()) * (q[2] < 0 ? 0.7 : 1)
+            out.push({ i: i, x0: px - size / 2, y0: py - size / 2, size: size,
+                       cx: cx - (px - size / 2), cy: cy - (py - size / 2), R: R,
+                       vx: dx * dist, vy: dy * dist, spin: (Math.random() - 0.5) * 2, drift: (Math.random() - 0.5) * 8,
+                       k: k * 6.28, back: q[2] < 0 })
+        }
+        doomChunks = out
+        // where each app was when it blew: it flies from there
+        const from = {}
+        for (let i = 0; i < nodes.length; i++) if (proj[i]) from[nodes[i].name] = { x: proj[i].x, y: proj[i].y }
+        doomFrom = from
+        const keep = selected
+        doom = "boom"
+        doomT = 0
+        fireGlitch("tear")
+        boomFlash.restart()
+        if (keep >= 0) aimAt(keep)
+        terminal.scrawl(["> ...", "> planet destroyed. the apps drift on."])
+    }
+    // an app's place in the debris field: a stable spot from its name, flown
+    // to from where it was, then bobbing
+    function nameHash(s, salt) {
+        let h = 2166136261 ^ salt
+        for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) }
+        return ((h >>> 0) % 100000) / 100000
+    }
+    function debrisSpot(node, i) {
+        const name = node.name || String(i)
+        const a = nameHash(name, 1) * Math.PI * 2, r = Math.sqrt(0.08 + 0.92 * nameHash(name, 2))
+        const tx = width / 2 + Math.cos(a) * r * width * 0.42
+        const ty = height * 0.48 + Math.sin(a) * r * height * 0.33
+        const from = doomFrom[name] || { x: cx, y: cy }
+        const fly = 1 - Math.exp(-doomT * 1.8)
+        const k = nameHash(name, 3) * 6.28
+        return { x: from.x + (tx - from.x) * fly + Math.sin(driftT * 0.4 + k) * 7,
+                 y: from.y + (ty - from.y) * fly + Math.cos(driftT * 0.33 + k) * 5,
+                 z: 0.4 + 0.6 * nameHash(name, 4) }
+    }
+
     // ------------------------------------------------------------- the glitches
     property real glitch: 0          // 0..1, the glitch pass's intensity
     property real glitchSeed: 0
@@ -589,7 +694,7 @@ FocusScope {
     }
     Timer {
         id: glitchTimer
-        running: view.active && view.glitchesOn
+        running: view.active && view.glitchesOn && view.doom !== "countdown"
         interval: 4000
         onTriggered: {
             view.fireGlitch()
@@ -720,7 +825,82 @@ FocusScope {
             property var land: landMap
             property var glyphs: globeGlyphTex
             property real glyphCount: globeGlyphs.count
+            property color doomColor: view.doomColor
+            property real doomPulse: view.doomPulse
+            property real chunk: -1
+            property real chunkCount: view.chunkCount
+            visible: !view.exploded
             fragmentShader: Qt.resolvedUrl("shaders/globe.frag.qsb")
+        }
+
+        // <namek: pulses rippling off the globe during the countdown
+        Repeater {
+            model: view.doom === "countdown" ? 3 : 0
+            delegate: Rectangle {
+                required property int index
+                readonly property real ph: (view.doomT * (0.7 + view.doomT * 0.35) + index / 3) % 1
+                width: view.radius * 2 * (1 + ph * 0.9); height: width; radius: width / 2
+                x: view.cx - width / 2; y: view.cy - height / 2
+                color: "transparent"
+                border.width: 3 + 10 * (1 - ph)
+                border.color: view.doomColor
+                opacity: (1 - ph) * 0.8
+            }
+        }
+        // the globe in pieces, each drawn by the globe shader as its own chunk
+        Repeater {
+            model: view.exploded ? view.doomChunks : []
+            delegate: Item {
+                id: piece
+                required property var modelData
+                readonly property real fly: 1 - Math.exp(-view.doomT * 1.5)
+                x: modelData.x0 + modelData.vx * fly + Math.sin(view.driftT * 0.3 + modelData.k) * 6
+                y: modelData.y0 + modelData.vy * fly + Math.cos(view.driftT * 0.27 + modelData.k) * 5
+                width: modelData.size; height: modelData.size
+                rotation: modelData.spin * fly * 70 + view.doomT * modelData.drift
+                scale: 1 - 0.45 * fly                // receding into the field
+                opacity: modelData.back ? 0.75 : 1
+                ShaderEffect {
+                    anchors.fill: parent
+                    property real time: view.driftT
+                    property vector2d resolution: Qt.vector2d(width, height)
+                    property vector2d center: Qt.vector2d(piece.modelData.cx, piece.modelData.cy)
+                    property real radius: piece.modelData.R
+                    property matrix4x4 rotation: view.doomRot || view.rotation4
+                    property color dotColor: view.cPrimary
+                    property color glowColor: view.cGlow
+                    property real rings: 34
+                    property real style: Math.max(0, view.globeStyles.indexOf(view.activeStyle))
+                    property real pulse: 0
+                    property var land: landMap
+                    property var glyphs: globeGlyphTex
+                    property real glyphCount: globeGlyphs.count
+                    property color doomColor: view.doomColor
+                    property real doomPulse: 0
+                    property real chunk: piece.modelData.i
+                    property real chunkCount: view.chunkCount
+                    fragmentShader: Qt.resolvedUrl("shaders/globe.frag.qsb")
+                }
+            }
+        }
+        // the blast: a shockwave ring racing out, and a flash over everything
+        Rectangle {
+            visible: view.exploded && view.doomT < 1.6
+            readonly property real k: Math.min(1, view.doomT / 1.4)
+            width: view.radius * 2 * (0.6 + k * 5); height: width; radius: width / 2
+            x: view.width / 2 - width / 2; y: view.height * 0.47 - height / 2
+            color: "transparent"
+            border.width: 40 * (1 - k) + 2
+            border.color: view.doomColor
+            opacity: 1 - k
+        }
+        Rectangle {
+            id: flash
+            anchors.fill: parent
+            z: 40
+            color: Qt.lighter(view.doomColor, 1.6)
+            opacity: 0
+            NumberAnimation on opacity { id: boomFlash; running: false; from: 1; to: 0; duration: 900; easing.type: Easing.OutCubic }
         }
         // what the earth styles are drawn from: the land (Natural Earth, public
         // domain), and a row of glyphs - 0 and 1 first, for the binary skin

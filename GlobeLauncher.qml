@@ -36,9 +36,11 @@ Item {
         let p = {}
         try { p = typeof payloadJson === "string" ? JSON.parse(payloadJson || "{}") : (payloadJson || {}) } catch (e) {}
         if (p.glitch) { glitchSoon.kind = String(p.glitch); glitchSoon.restart() }
+        if (p.namek) namekSoon.restart()             // the secret, without typing it
         // ...or a level of network traffic (0..1) to draw, whatever the real one
         view.netTest = Number(p.net) || 0
     }
+    Timer { id: namekSoon; interval: 1200; onTriggered: view.selfDestruct() }
     Timer { id: glitchSoon; property string kind: ""; interval: 700; onTriggered: view.fireGlitch(kind) }
 
     Timer {
