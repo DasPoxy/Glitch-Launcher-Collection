@@ -145,101 +145,170 @@ float orbit(vec2 d, vec3 nrm, float R, float speed, float r2) {
 }
 
 // ------------------------------------------------------------------ unicron
-// the planet-eater: an armoured sphere of plates with seams and circuitry,
-// a cratered cap, vents glowing in the theme colour. The face (a mouth
-// with mandibles, firing a beam), the ring of lights round it, its spokes
-// and the antennae stay put while the body turns behind them.
-vec3 unicronBody(vec3 n, out float glowAmt) {
+// the planet-eater, all on the turning body: a hull of small plates, a
+// cratered armour cap over the north with a jagged edge and a trench cut
+// across it, a ribbed belt round the middle with antennae bristling where it
+// meets the edge, a great glowing eye-vent, and a mouth between two horned
+// mandibles that fires a beam straight out of it. A ring of lights on
+// spokes hangs round it all, still.
+const vec3 U_MOUTH = vec3(0.80, -0.12, 0.58);   // model directions (normalised in use)
+const vec3 U_EYE = vec3(-0.86, -0.08, 0.50);
+const vec3 U_BELT = vec3(0.10, 1.0, 0.0);       // the belt's axis
+
+float angTo(vec3 m, vec3 dir) { return acos(clamp(dot(m, normalize(dir)), -1.0, 1.0)); }
+
+// where we are round a feature at dir: angle about it, in its own frame
+float around(vec3 m, vec3 dir) {
+    vec3 w = normalize(dir);
+    vec3 u = normalize(cross(vec3(0.0, 1.0, 0.0), w));
+    vec3 v = cross(w, u);
+    return atan(dot(m, v), dot(m, u));
+}
+
+vec3 unicronSurface(vec3 n, out float glowAmt, out float hot) {
     vec3 m = transpose(mat3(rotation)) * n;
     float lat = asin(clamp(m.y, -1.0, 1.0));
     float lon = atan(m.z, m.x);
-    vec2 id, f, c;
-    cells(lat, lon, rings * 0.5, id, f, c);
-    float seam = 1.0 - smoothstep(0.0, 0.06, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
-    vec3 L = normalize(vec3(-0.5, 0.55, 0.65));
-    float diff = 0.25 + 0.75 * max(dot(n, L), 0.0);
-    vec3 metal = mix(vec3(0.10, 0.11, 0.16), vec3(0.20, 0.21, 0.28), hash(id)) ;
-    // the cratered cap over the north
-    float cap = smoothstep(0.0, 0.04, m.y - (0.42 + 0.12 * sin(lon * 3.0 + 1.0) + 0.05 * sin(lon * 11.0)));
-    vec2 cf = fract(vec2(lon * 3.0, lat * 6.0)) - 0.5;
-    float crater = smoothstep(0.22, 0.16, length(cf)) * step(0.55, hash(floor(vec2(lon * 3.0, lat * 6.0))));
-    vec3 capCol = mix(vec3(0.42, 0.44, 0.50), vec3(0.28, 0.29, 0.34), crater);
-    vec3 col = mix(metal, capCol, cap) * diff;
-    col *= 1.0 - seam * 0.6;
-    // circuitry: thin lit traces across some plates
-    float trace = step(0.6, hash(id + 2.0)) * (1.0 - smoothstep(0.0, 0.03, abs(fract(f.y * 3.0 + hash(id) ) - 0.5) - 0.0)) * step(0.15, f.x) * step(f.x, 0.85);
-    // vents: round, glowing
-    float vent = step(0.9, hash(id + 7.7)) * (1.0 - cap);
-    float vd = length(f - 0.5);
-    float v = vent * smoothstep(0.3, 0.2, vd);
-    glowAmt = v + trace * 0.35 * (1.0 - cap) + seam * 0.12 * (1.0 - cap);
-    col = mix(col, vec3(0.0), vent * smoothstep(0.36, 0.3, vd) * (1.0 - v));
+    vec3 L = normalize(vec3(-0.5, 0.6, 0.62));
+    float diff = 0.22 + 0.78 * max(dot(n, L), 0.0);
+    glowAmt = 0.0; hot = 0.0;
+
+    // the hull: courses of small plates, each row offset like brickwork
+    float rowsN = rings * 1.1;
+    float row = floor((lat + PI / 2.0) / PI * rowsN);
+    float per = max(4.0, floor(2.4 * rowsN * cos(lat)));
+    float u = (lon + PI) / (2.0 * PI) * per + 0.5 * mod(row, 2.0);
+    vec2 f = vec2(fract(u), fract((lat + PI / 2.0) / PI * rowsN));
+    vec2 id = vec2(floor(u), row);
+    float seam = 1.0 - smoothstep(0.0, 0.08, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+    vec3 hull = mix(vec3(0.13, 0.13, 0.22), vec3(0.19, 0.19, 0.30), hash(id)) * (1.0 - 0.45 * seam);
+    hull = mix(hull, hull + glowColor.rgb * 0.05, 0.5);
+
+    // the armour cap: grey, cratered, a jagged lower edge
+    float edge = 0.30 + 0.07 * sin(lon * 4.0 + 0.7) + 0.04 * sin(lon * 13.0) + 0.025 * sin(lon * 29.0 + 2.0);
+    float cap = smoothstep(0.0, 0.015, m.y - edge);
+    vec2 cc = vec2(lon * 3.2, lat * 7.0);
+    float crater = smoothstep(0.3, 0.2, length(fract(cc) - 0.5)) * step(0.5, hash(floor(cc)));
+    float craterRim = smoothstep(0.06, 0.0, abs(length(fract(cc) - 0.5) - 0.3)) * step(0.5, hash(floor(cc)));
+    vec3 capCol = mix(vec3(0.50, 0.52, 0.58), vec3(0.32, 0.33, 0.39), crater) + craterRim * 0.12;
+    // a trench cut across it, on a tilted great circle
+    float trench = smoothstep(0.03, 0.012, abs(dot(m, normalize(vec3(0.85, 0.15, -0.5))))) * smoothstep(0.0, 0.1, m.y);
+    capCol = mix(capCol, vec3(0.12, 0.12, 0.17), trench);
+    // the cap's shadowed lip
+    float lip = smoothstep(0.035, 0.0, m.y - edge) * step(edge - 0.035, m.y);
+    vec3 col = mix(hull, capCol, cap) * diff;
+    col *= 1.0 - lip * 0.6;
+
+    // the belt round the middle, ribbed, its edges lit
+    float bd = dot(m, normalize(U_BELT));
+    float belt = smoothstep(0.075, 0.065, abs(bd));
+    float rib = 0.6 + 0.4 * step(0.5, fract(lon * 40.0));
+    float beltEdge = smoothstep(0.012, 0.0, abs(abs(bd) - 0.07));
+    col = mix(col, vec3(0.20, 0.18, 0.24) * rib * diff, belt);
+    glowAmt += beltEdge * 0.6 + belt * step(0.93, fract(lon * 6.0)) * 0.8;   // lights along it
+
+    // little vents, glowing, over the hull
+    vec2 vc = vec2(lon * 5.0, lat * 9.0);
+    float vent = step(0.86, hash(floor(vc) + 3.3)) * (1.0 - cap) * (1.0 - belt);
+    float vd = length(fract(vc) - 0.5);
+    glowAmt += vent * smoothstep(0.17, 0.09, vd);
+    col *= 1.0 - vent * smoothstep(0.22, 0.17, vd) * 0.6;
+
+    // the eye-vent: a great glowing disc in a dark socket
+    float ea = angTo(m, U_EYE);
+    float eye = smoothstep(0.34, 0.31, ea);
+    col = mix(col, vec3(0.02), smoothstep(0.38, 0.35, ea) * (1.0 - eye));
+    float grill = 0.75 + 0.25 * step(0.5, fract(ea * 40.0));
+    glowAmt += eye * grill * (0.9 + 0.1 * sin(time * 2.0));
+    hot += eye * smoothstep(0.31, 0.1, ea) * 0.6;
+
+    // the mouth: a socket with a molten core
+    float ma = angTo(m, U_MOUTH);
+    col = mix(col, vec3(0.03), smoothstep(0.24, 0.21, ma));
+    hot += smoothstep(0.17, 0.0, ma) * 1.6;
+    glowAmt += exp(-ma * 12.0) * 0.8;
+    // two horned mandibles hooked round it, tapering to points
+    float phi = around(m, U_MOUTH);
+    float upper = smoothstep(-0.4, 0.2, phi) * smoothstep(2.4, 1.6, phi);
+    float lower = smoothstep(-2.8, -2.2, phi) * smoothstep(-0.3, -0.9, phi);
+    float taper = max(upper, lower);
+    float horn = smoothstep(0.05 * taper + 0.002, 0.0, abs(ma - 0.29 - 0.05 * (1.0 - taper))) * step(0.05, taper);
+    col = mix(col, vec3(0.30, 0.26, 0.26) * diff, horn);
+    glowAmt += horn * smoothstep(0.31, 0.27, ma) * 0.9;           // their inner edges catch the fire
     return col;
 }
 
 vec4 unicron(vec2 d, float r2) {
     float rr = sqrt(r2);
-    vec3 hot = mix(dotColor.rgb, vec3(1.0), 0.35);
+    vec3 hotCol = mix(dotColor.rgb, vec3(1.0), 0.45);
     vec3 col = vec3(0.0);
     float a = 0.0;
-    vec2 M = vec2(0.40, -0.26);                       // the mouth
-    vec2 D = normalize(vec2(0.86, -0.5));             // where it fires
     if (r2 < 1.0) {
         float z = sqrt(1.0 - r2);
-        float g;
-        col = unicronBody(vec3(d, z), g);
-        col += dotColor.rgb * g * (0.8 + 0.2 * sin(time * 3.0));
-        col += glowColor.rgb * pow(1.0 - z, 2.5) * 0.6;          // rim
+        float g, h;
+        col = unicronSurface(vec3(d, z), g, h);
+        col += dotColor.rgb * g + hotCol * h;
+        col += glowColor.rgb * pow(1.0 - z, 2.6) * 0.5;          // rim
         a = 1.0;
-        // the mouth: a dark socket, a molten core
-        float md = length(d - M);
-        col = mix(col, vec3(0.02), smoothstep(0.24, 0.2, md));
-        col += hot * smoothstep(0.15, 0.0, md) * 1.6 + dotColor.rgb * exp(-md * 14.0) * 0.8;
     }
-    // mandibles: two arcs hooked round the mouth
-    {
-        vec2 q = d - M;
-        float ang = atan(q.y, q.x);
-        float ring = abs(length(q) - 0.27);
-        float upper = step(0.2, ang) * step(ang, 1.7);
-        float lower = step(-2.3, ang) * step(ang, -0.6);
-        float arc = smoothstep(0.035, 0.015, ring) * max(upper, lower);
-        col = mix(col, mix(vec3(0.12, 0.12, 0.16), dotColor.rgb * 0.6, 0.4), arc);
-        col += dotColor.rgb * smoothstep(0.012, 0.0, abs(ring - 0.03)) * max(upper, lower) * 0.8;
-        a = max(a, arc);
-    }
-    // the ring of lights, its spokes, the antennae
-    float Rr = 1.34;
-    float ringLine = smoothstep(0.012, 0.004, abs(rr - Rr));
+
+    // the ring of lights, its spokes (still, round the turning body)
+    float Rr = 1.36;
+    float ringLine = smoothstep(0.014, 0.005, abs(rr - Rr));
     float th = atan(d.y, d.x) + time * 0.04;
-    float beads = 48.0;
+    float beads = 44.0;
+    float bk = floor(th / (2.0 * PI) * beads);
     float bd = abs(fract(th / (2.0 * PI) * beads) - 0.5) * (2.0 * PI / beads) * Rr;
-    float bead = exp(-(pow(bd, 2.0) + pow(rr - Rr, 2.0)) * 9000.0) * (0.6 + 0.4 * sin(time * 4.0 + floor(th / (2.0 * PI) * beads)));
-    float spoke = smoothstep(0.012, 0.004, abs(d.x)) * step(1.0, abs(d.y)) * step(abs(d.y), Rr);
-    float sideAng = atan(d.y, abs(d.x));                       // both sides alike
-    float sb = floor(sideAng * 14.0);
-    float spikeLen = 1.0 + 0.08 + 0.16 * hash(vec2(sb, sign(d.x)));
-    float spike = step(abs(sideAng), 0.55) * step(1.0, rr) * step(rr, spikeLen)
-                * smoothstep(0.006, 0.0, abs(fract(sideAng * 14.0) - 0.5) / 14.0 * rr);
-    vec3 frameCol = mix(vec3(0.35, 0.3, 0.3), dotColor.rgb, 0.6);
-    col += frameCol * (ringLine * 0.8 + spoke * 0.9 + spike * 0.8) + hot * bead * 1.5;
-    a = max(a, max(max(ringLine, spoke), max(spike, bead)));
-    // the beam, widening, with streaks running out along it
-    vec2 q = d - M;
-    float along = dot(q, D);
-    float perp = abs(q.x * D.y - q.y * D.x);
-    float w = 0.07 + along * 0.24;
-    float beam = step(0.08, along) * smoothstep(w, w * 0.2, perp) * exp(-along * 0.45);
-    float streak = hash(vec2(floor(perp / w * 9.0), 0.0));
-    float run = fract(along * 1.5 - time * (1.0 + streak) + streak);
-    beam *= 0.6 + 0.4 * smoothstep(0.7, 1.0, run) * step(0.5, streak);
-    beam *= 0.85 + 0.15 * sin(time * 7.0);
-    col += mix(hot, dotColor.rgb, smoothstep(0.0, 1.5, along)) * beam * 1.1;
-    a = max(a, beam * 0.9);
-    // a soft halo
+    float bead = exp(-(bd * bd + (rr - Rr) * (rr - Rr)) * 7000.0) * (0.55 + 0.45 * sin(time * 4.0 + bk * 1.7));
+    float spoke = smoothstep(0.014, 0.005, abs(d.x)) * step(0.99, abs(d.y)) * step(abs(d.y), Rr);
+    float spokeStud = smoothstep(0.04, 0.025, length(vec2(d.x, abs(d.y) - 1.17)));
+    vec3 frameCol = mix(vec3(0.32, 0.28, 0.26), dotColor.rgb, 0.55);
+    col += frameCol * (ringLine * 0.8 + spoke * 0.9 + spokeStud * 0.7) + hotCol * bead * 1.5;
+    a = max(a, max(max(ringLine, spoke), max(spokeStud, bead)));
+
+    // antennae bristling from the belt where it meets the edge
+    vec3 B = mat3(rotation) * normalize(U_BELT);
+    vec3 t3 = cross(B, vec3(0.0, 0.0, 1.0));
+    if (length(t3.xy) > 0.05 && rr > 0.99) {
+        vec2 t = normalize(t3.xy);
+        float ang = atan(d.y, d.x);
+        for (int s = 0; s < 2; s++) {
+            vec2 dir = s == 0 ? t : -t;
+            float da = ang - atan(dir.y, dir.x);
+            da = mod(da + PI, 2.0 * PI) - PI;
+            if (abs(da) < 0.5) {
+                float k = floor(da * 22.0);
+                float len = 1.06 + 0.2 * hash(vec2(k, float(s))) * (1.0 - abs(da) * 1.6);
+                float line = smoothstep(0.006, 0.0, abs(fract(da * 22.0) - 0.5) / 22.0 * rr) * step(rr, len);
+                float tip = smoothstep(0.018, 0.0, abs(rr - len)) * line;
+                col += frameCol * line * 0.8 + hotCol * tip * 0.8;
+                a = max(a, line);
+            }
+        }
+    }
+
+    // the beam, out of the mouth wherever it has turned to
+    vec3 mv = mat3(rotation) * normalize(U_MOUTH);
+    float facing = smoothstep(0.0, 0.35, mv.z);
+    if (facing > 0.0) {
+        vec2 M = mv.xy;
+        vec2 D = length(M) > 0.05 ? normalize(M) : vec2(0.7, -0.7);
+        vec2 q = d - M;
+        float along = dot(q, D);
+        float perp = abs(q.x * D.y - q.y * D.x);
+        float w = 0.06 + along * 0.26;
+        float beam = step(0.0, along) * smoothstep(w, w * 0.15, perp) * exp(-along * 0.4);
+        float streak = hash(vec2(floor(perp / w * 9.0), 0.0));
+        float run = fract(along * 1.4 - time * (1.0 + streak) + streak);
+        beam *= 0.6 + 0.4 * smoothstep(0.7, 1.0, run) * step(0.5, streak);
+        beam *= (0.85 + 0.15 * sin(time * 7.0)) * facing;
+        col += mix(hotCol, dotColor.rgb, smoothstep(0.0, 1.5, along)) * beam * 1.1;
+        a = max(a, beam * 0.9);
+    }
+
     float halo = exp(-max(rr - 1.0, 0.0) * 9.0) * smoothstep(0.92, 1.0, rr);
-    col += glowColor.rgb * halo * 0.4;
-    a = max(a, halo * 0.4);
+    col += glowColor.rgb * halo * 0.35;
+    a = max(a, halo * 0.35);
     return vec4(col, a);
 }
 

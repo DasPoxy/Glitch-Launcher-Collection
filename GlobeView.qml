@@ -404,7 +404,61 @@ FocusScope {
         event.accepted = true
     }
     // fresh each time it opens
-    onActiveChanged: if (active) { query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() }
+    onActiveChanged: if (active) { query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
+
+    // --------------------------------------------------------- the readout
+    // linger on something for a few seconds and the corner terminal scans it:
+    // an app's description, categories and command; a file's type, size,
+    // length, pixels, folder; a command's arguments; a menu row's action
+    property string described: ""
+    function nodeKey(n) { return n ? n.kind + ":" + (n.path || n.id || n.base || n.name) : "" }
+    Timer {
+        id: dwell
+        interval: 2600
+        running: view.active
+        onTriggered: view.describe(view.nodes[view.selected])
+    }
+    onSelectedChanged: dwell.restart()
+    function describe(n) {
+        const key = nodeKey(n)
+        if (!n || key === described) return
+        described = key
+        const out = ["> scan :: " + (n.kind === "cmd" ? "omarchy " + n.base : n.name)]
+        if (n.kind === "app") {
+            const e = n.entry
+            if (e.comment) out.push("> desc    " + e.comment)
+            if (e.genericName) out.push("> kind    " + e.genericName)
+            if (e.categories && e.categories.length) out.push("> class   " + e.categories.filter(c => c).join(" / "))
+            if (e.execString) out.push("> exec    " + e.execString)
+            if (e.id) out.push("> id      " + e.id + (e.runInTerminal ? "  [terminal]" : ""))
+            terminal.scrawl(out)
+        } else if (n.kind === "file") {
+            infoProbe.lead = out
+            infoProbe.dir = n.sub
+            infoProbe.running = false
+            infoProbe.command = ["bash", Qt.resolvedUrl("info.sh").toString().replace(/^file:\/\//, ""), n.path]
+            infoProbe.running = true
+        } else if (n.kind === "cmd") {
+            if (n.sub) out.push("> args    " + n.sub + (n.needsArg ? "  (required)" : ""))
+            out.push("> desc    " + n.detail)
+            terminal.scrawl(out)
+        } else if (n.kind === "menu") {
+            if (n.sub) out.push("> path    " + n.sub)
+            out.push("> run     " + n.run)
+            if (n.detail && n.detail !== n.run) out.push("> desc    " + n.detail)
+            terminal.scrawl(out)
+        }
+    }
+    Process {
+        id: infoProbe
+        property var lead: []
+        property string dir: ""
+        stdout: StdioCollector {
+            onStreamFinished: terminal.scrawl(infoProbe.lead
+                .concat(text.split("\n").filter(l => l).map(l => "> " + l))
+                .concat(["> dir     " + infoProbe.dir]))
+        }
+    }
 
     // ------------------------------------------------------- network traffic
     // bytes in and out per second, summed over the real interfaces, read from
@@ -829,27 +883,40 @@ FocusScope {
             anchors.bottom: parent.bottom
             anchors.margins: 40
             spacing: 2
-            property var lines: []
+            // lines as a model, so only a new line types itself out
+            ListModel { id: termLines }
+            property var queue: []               // lines waiting their turn
+            function push(text) {
+                termLines.append({ line: text.length > 74 ? text.slice(0, 73) + "…" : text })
+                while (termLines.count > 10) termLines.remove(0)
+            }
+            function scrawl(list) { queue = queue.concat(list) }
+            Timer {
+                interval: 240; repeat: true
+                running: terminal.queue.length > 0
+                onTriggered: { terminal.push(terminal.queue[0]); terminal.queue = terminal.queue.slice(1) }
+            }
             readonly property var phrases: [
                 "> handshake ok :: node %h", "> tracing route //apps/%n", "> sync shard 0x%h ... ok",
                 "> signal drift detected, recalibrating", "> uplink %n%% :: carrier stable", "> decrypting index 0x%h",
                 "> wake up, operator", "> follow the white rabbit", "> mapping %n nodes to the sphere", "> packet loss 0.%n%"]
             function say() {
+                if (queue.length) return                 // don't talk over a readout
                 let s = phrases[Math.floor(Math.random() * phrases.length)]
                 s = s.replace("%h", Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")).replace("%n", Math.floor(Math.random() * 99))
-                lines = lines.concat([s]).slice(-5)
+                push(s)
             }
             Repeater {
-                model: terminal.lines
+                model: termLines
                 delegate: Text {
-                    required property string modelData
+                    required property string line
                     required property int index
                     property int shown: 0
-                    text: modelData.slice(0, shown) + (shown < modelData.length ? "▌" : "")
+                    text: line.slice(0, shown) + (shown < line.length ? "▌" : "")
                     color: view.cPrimary
-                    opacity: 0.25 + 0.5 * (index + 1) / terminal.lines.length
+                    opacity: 0.25 + 0.6 * (index + 1) / termLines.count
                     font.family: view.mono; font.pixelSize: 12
-                    Timer { interval: 24; repeat: true; running: parent.shown < parent.modelData.length; onTriggered: parent.shown++ }
+                    Timer { interval: 18; repeat: true; running: parent.shown < parent.line.length; onTriggered: parent.shown++ }
                 }
             }
         }
@@ -1028,7 +1095,7 @@ FocusScope {
                 spacing: 6
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
-                Chip { label: "Network traffic"; on: view.settings.net !== false; onClicked: view.setSetting("net", view.settings.net === false) }
+                Chip { label: "Network particles"; on: view.settings.net !== false; onClicked: view.setSetting("net", view.settings.net === false) }
             }
 
             Heading { text: "FILE PREVIEW  ·  [TAB] cycles"; Layout.fillWidth: true; wrapMode: Text.WordWrap }

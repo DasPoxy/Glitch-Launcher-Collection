@@ -9,8 +9,9 @@ of being jacked into a terminal.
   round the rim), **code earth** (the continents built of matrix glyphs,
   debris drifting about) or **holo earth** (dotted continents, lit
   coastlines, satellites on orbit rings), **unicron** (an armoured
-  planet-eater, vents glowing, a mouth firing a beam, a ring of lights round
-  it) or a **dyson sphere** (a lattice shell round a star, its light
+  planet-eater: a cratered cap with a trench across it, a belt with antennae,
+  a glowing eye-vent, a horned mouth firing a beam as it turns, a ring of
+  lights round it) or a **dyson sphere** (a lattice shell round a star, its light
   escaping through the gaps). Its far side shows faintly
   through, with a rim glow and a halo. Every app sits on it, evenly
   spread, and is projected out on a beam.
@@ -21,8 +22,10 @@ of being jacked into a terminal.
   Enter launches, Esc clears the search or closes.
 - **Atmosphere**: a full-resolution starfield, and now and then a glitch, one of:
   tear, blocks (datamosh), VHS, CRT collapse, code bleed or invert (pick
-  which in the options) - and a terminal in the corner types a line.
-- **Network traffic**: your real throughput (from `/proc/net/dev`) as packets
+  which in the options) - and a terminal in the corner types a line. Linger on a selection for a
+  few seconds and it scans it: an app's description, categories and command;
+  a file's type, size, length or pixels, folder; a command's arguments.
+- **Network particles**: your real throughput (from `/proc/net/dev`) as packets
   of light streaming in to the globe (downloads) and out of it (uploads),
   with static crackling over the screen; busier traffic, more lanes, faster.
   The rates show under the prompt.
