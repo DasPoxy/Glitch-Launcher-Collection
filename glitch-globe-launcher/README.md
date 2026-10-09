@@ -1,5 +1,10 @@
 # Glitch-Globe-Launcher
 
+![Holo Earth](../screenshots/globe-holo.jpg)
+![Unicron](../screenshots/globe-unicron.jpg)
+![Bestagon](../screenshots/globe-hex.jpg)
+![File preview](../screenshots/globe-files.jpg)
+
 A full-screen app launcher for [Omarchy](https://omarchy.org): your installed
 apps, projected out from a spinning dot-globe over a starfield, with the feel
 of being jacked into a terminal.

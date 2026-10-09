@@ -12,6 +12,31 @@ out again:
 
 Each folder is a complete plugin with its own README.
 
+## Screenshots
+
+**Glitch-Globe-Launcher** - three of its globe styles (Holo Earth, Unicron,
+Bestagon), the Omarchy menu's actions after `>`, and a file previewed in
+the glyph look after `/`:
+
+![Holo Earth](screenshots/globe-holo.jpg)
+
+| | |
+| --- | --- |
+| ![Unicron](screenshots/globe-unicron.jpg) | ![Bestagon](screenshots/globe-hex.jpg) |
+| ![Omarchy commands](screenshots/globe-commands.jpg) | ![File preview](screenshots/globe-files.jpg) |
+
+**Glitch-Theme-Selector** - the arc and the pills carousels, the whole UI
+in the highlighted theme's colours:
+
+| | |
+| --- | --- |
+| ![Theme selector, arc](screenshots/theme-arc.jpg) | ![Theme selector, pills](screenshots/theme-pills.jpg) |
+
+**Glitch-Background-Selector** - your own folder's wallpapers on the hand
+carousel, the monitor previewing blur fit:
+
+![Background selector](screenshots/background-hand.jpg)
+
 ## Install
 
 Clone it, then install all three or any of them:

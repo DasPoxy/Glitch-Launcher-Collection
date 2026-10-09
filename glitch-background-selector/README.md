@@ -1,5 +1,7 @@
 # Glitch-Background-Selector
 
+![Hand carousel, blur fit](../screenshots/background-hand.jpg)
+
 An Omarchy wallpaper selector with an old-monitor, glitchy matrix / cyberpunk
 feel - a sibling of [Glitch-Theme-Selector](../glitch-theme-selector)
 and [Glitch-Globe-Launcher](../glitch-globe-launcher).

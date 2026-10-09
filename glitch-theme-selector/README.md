@@ -1,5 +1,8 @@
 # Glitch-Theme-Selector
 
+![Arc](../screenshots/theme-arc.jpg)
+![Pills](../screenshots/theme-pills.jpg)
+
 An Omarchy theme selector with an old-monitor, matrix / cyberpunk feel - a
 sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher).
 
