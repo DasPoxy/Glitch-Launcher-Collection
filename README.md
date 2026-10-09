@@ -11,7 +11,8 @@ sibling of [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
   fanned hand of cards), ring (3D), panorama, triple, grid, pills (thin
   pills in each theme's colours, the highlighted one opening into its card)
   or blips (a dot per theme, the card risen over its blip). Arrows, the
-  wheel or a click browse, typing filters.
+  wheel or a click browse; **/** filters; **R** jumps to a random theme
+  (**Shift+R** applies a random one straight away).
 - **Options** (Ctrl+, or the button top right): the carousel style, the
   monitor's look, CRT on / off, glitches normal / subtle / off, and the
   open / close glitch.

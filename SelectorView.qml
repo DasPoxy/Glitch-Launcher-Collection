@@ -76,6 +76,7 @@ FocusScope {
     }
     property bool landOnCurrent: true
     property string query: ""
+    property bool filtering: false             // after "/": typing filters
     readonly property var shown: {
         const q = query.trim().toLowerCase()
         return q ? themes.filter(t => (t.name + " " + t.slug + " " + t.mode).toLowerCase().includes(q)) : themes
@@ -197,6 +198,17 @@ FocusScope {
             p.vis = a < 9 && d > 0.05
         }
         return p
+    }
+
+    // r: a random theme (never the highlighted one again); Shift+R applies it too
+    function randomPick(andApply) {
+        if (shown.length < 2) return
+        let i = sel
+        while (i === sel) i = Math.floor(Math.random() * shown.length)
+        terminal.push("> random palette :: " + shown[i].name)
+        sel = i
+        if (glitchLevel > 0) fireGlitch(["blocks", "tear", "vhs"][Math.floor(Math.random() * 3)], 0.5 * glitchLevel)
+        if (andApply) apply(shown[i])
     }
 
     function step(d) {
@@ -355,6 +367,7 @@ FocusScope {
     // fresh each time it opens
     onActiveChanged: if (active) {
         query = ""
+        filtering = false
         settingsOpen = false
         landOnCurrent = true
         themeReader.running = true
@@ -368,6 +381,12 @@ FocusScope {
         if (settingsOpen) {
             if (k === Qt.Key_Escape || (k === Qt.Key_Comma && ctrl)) { settingsOpen = false; event.accepted = true }
             return
+        }
+        // "/" starts a filter; while filtering, letters type into it
+        if (filtering) {
+            if (k === Qt.Key_Escape) { filtering = false; query = ""; event.accepted = true; return }
+            if (k === Qt.Key_Backspace) { if (query) query = query.slice(0, -1); else filtering = false; sel = 0; pos = 0; event.accepted = true; return }
+            if (event.text && event.text.length === 1 && event.text >= " " && !ctrl) { query += event.text; sel = 0; pos = 0; event.accepted = true; return }
         }
         const rowStep = settings.carousel === "grid" ? gridCols : 1
         if (k === Qt.Key_Escape) { if (query) query = ""; else if (closeRequest) closeRequest() }
@@ -387,8 +406,8 @@ FocusScope {
             revealAnim.restart()
         }
         else if (k === Qt.Key_T && ctrl) { setSetting("crt", !settings.crt); if (glitchLevel > 0) fireGlitch("crt", 0.8 * glitchLevel) }
-        else if (k === Qt.Key_Backspace) { query = query.slice(0, -1); sel = 0; pos = 0 }
-        else if (event.text && event.text.length === 1 && event.text >= " " && !ctrl) { query += event.text; sel = 0; pos = 0 }
+        else if (k === Qt.Key_Slash && !ctrl) { filtering = true; query = "" }
+        else if (k === Qt.Key_R && !ctrl) randomPick(!!(event.modifiers & Qt.ShiftModifier))
         else return
         event.accepted = true
     }
@@ -451,8 +470,8 @@ FocusScope {
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: (view.query ? "> " + view.query : "> type to filter") + (cursorBlink.on ? "_" : " ")
-                color: view.query ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
+                text: (view.filtering ? "/" + view.query : "> [/] filter   [R] random") + (cursorBlink.on ? "_" : " ")
+                color: view.filtering ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
                 font.family: view.mono; font.pixelSize: 22
                 Timer { id: cursorBlink; property bool on: true; interval: 530; repeat: true; running: view.active; onTriggered: on = !on }
             }
@@ -848,7 +867,7 @@ FocusScope {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
-            text: "[← →] browse   [ENTER] apply   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [type] filter   [ESC] " + (view.query ? "clear" : "exit")
+            text: "[← →] browse   [ENTER] apply   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [R] random   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
             color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 12
         }
 
