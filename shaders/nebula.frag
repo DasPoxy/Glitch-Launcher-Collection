@@ -1,8 +1,8 @@
 #version 440
 // Globe-Launcher: a nebula over the starfield, in layers that shift by
 // different amounts as the globe turns and the mouse moves (parallax).
-//   mode 0  far clouds: two layers of swirling, domain-warped gas in the
-//           theme's colours (drawn at half resolution - it's all soft)
+//   mode 0  far clouds: two layers of wispy strands (ridged noise, combed
+//           along a warped flow) in the theme's colours (drawn at half resolution - it's all soft)
 //   mode 1  near dust: dark lanes dimming the stars behind them, and motes
 //           of dust drifting closest of all
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -37,15 +37,34 @@ float fbm(vec2 p, int oct) {
     return v;
 }
 
-// a layer of gas at a depth (how much it moves with the parallax)
+// ridged noise: thin bright creases where the noise crosses its middle
+float ridged(vec2 p, int oct) {
+    float v = 0.0, a = 0.5;
+    mat2 r = mat2(0.8, 0.6, -0.6, 0.8);
+    for (int i = 0; i < 6; i++) {
+        if (i >= oct) break;
+        float n = 1.0 - abs(2.0 * noise(p) - 1.0);
+        v += a * n * n;
+        p = r * p * 2.07 + 7.3;
+        a *= 0.5;
+    }
+    return v;
+}
+
+// a layer of gas at a depth (how much it moves with the parallax): thin
+// strands combed along a flow, gathered in loose drifts, with a faint veil
 vec4 cloud(vec2 uv, float depth, float scale, float seed) {
     vec2 p = uv * scale + shift * depth * scale + vec2(seed, seed * 0.7) + vec2(time * 0.004, time * 0.002) * scale;
-    vec2 w = vec2(fbm(p + vec2(0.0, time * 0.01), 5), fbm(p + vec2(5.2, 1.3), 5));
-    float n = fbm(p + 1.8 * w, 5);
-    float dens = smoothstep(0.42, 0.85, n);
-    float fil = smoothstep(0.02, 0.0, abs(n - 0.62)) * 0.5;       // bright filaments at the edges
-    vec3 col = mix(tintA.rgb, tintB.rgb, smoothstep(0.3, 0.8, w.x)) * (0.6 + 0.9 * dens) + tintB.rgb * fil;
-    float a = clamp(dens * 0.32 + fil * 0.35, 0.0, 0.5);
+    // the flow: warp hard, and stretch so the strands run long
+    vec2 w = vec2(fbm(p * 0.7 + vec2(0.0, time * 0.008), 4), fbm(p * 0.7 + vec2(5.2, 1.3), 4));
+    vec2 q = p + 2.6 * (w - 0.5);
+    q = vec2(q.x * 0.55, q.y * 1.5);
+    float strands = pow(ridged(q * 1.3, 5), 4.0) * 1.6;
+    float drift = smoothstep(0.38, 0.72, fbm(p * 0.45 + 9.0, 3));     // where the wisps gather
+    float veil = smoothstep(0.45, 0.8, fbm(p * 0.6 + 2.0, 3)) * 0.05;
+    float wisp = strands * drift;
+    vec3 col = mix(tintA.rgb, tintB.rgb, smoothstep(0.35, 0.75, w.x)) * (0.7 + 0.8 * wisp);
+    float a = clamp(wisp * 0.5 + veil, 0.0, 0.55);
     return vec4(col, a);
 }
 
@@ -62,8 +81,9 @@ void main() {
     } else {
         // dust lanes, dark, near
         vec2 p = uv * 3.2 + shift * 0.9 * 3.2 + vec2(time * 0.006, 0.0);
-        float lane = smoothstep(0.55, 0.78, fbm(p + fbm(p * 0.5 + 3.0, 3), 4));
-        float a = lane * 0.55;
+        vec2 dq = p + 1.8 * (vec2(fbm(p * 0.6, 3), fbm(p * 0.6 + 4.0, 3)) - 0.5);
+        float lane = pow(ridged(vec2(dq.x * 0.6, dq.y * 1.4), 4), 3.0) * smoothstep(0.45, 0.75, fbm(p * 0.4 + 6.0, 3));
+        float a = clamp(lane * 0.45, 0.0, 0.4);
         vec3 col = dark.rgb * a;
         // motes: soft specks, nearest of all, catching the theme's light
         vec2 px = qt_TexCoord0 * resolution + shift * 1.3 * resolution.y + vec2(time * 6.0, time * 2.0);
