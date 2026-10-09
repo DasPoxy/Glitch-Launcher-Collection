@@ -10,7 +10,9 @@ of being jacked into a terminal.
   round the rim), **code earth** (the continents built of matrix glyphs,
   debris drifting about) or **holo earth** (dotted continents, lit
   coastlines, satellites on orbit rings), **unicron** (an armoured
-  planet-eater: a cratered cap with a trench across it, a belt with antennae,
+  planet-eater of raised, bevelled, riveted plates engraved with circuitry,
+  torn open in three ragged wounds that crumble into glowing machinery and
+  shed tumbling debris; a cratered cap with a trench across it, a belt with antennae,
   a glowing eye-vent, a horned mouth firing a beam as it turns, a ring of
   lights round it) or a **dyson sphere** (a lattice shell round a star, its light
   escaping through the gaps), **matrix rain** (code falling down the sphere in

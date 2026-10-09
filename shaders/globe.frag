@@ -195,6 +195,72 @@ float around(vec3 m, vec3 dir) {
     return atan(dot(m, v), dot(m, u));
 }
 
+// value noise in 3D, for ragged damage edges
+float hash3f(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float noise3(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash3f(i), hash3f(i + vec3(1, 0, 0)), f.x), mix(hash3f(i + vec3(0, 1, 0)), hash3f(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(hash3f(i + vec3(0, 0, 1)), hash3f(i + vec3(1, 0, 1)), f.x), mix(hash3f(i + vec3(0, 1, 1)), hash3f(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+
+// where the hull is torn open: three wounds, ragged at the edge. 0 whole,
+// rising through the crumbling fringe (0..0.3) into the open wound (> 0.3)
+const vec3 U_WOUND1 = vec3(-0.35, -0.55, 0.76);
+const vec3 U_WOUND2 = vec3(0.55, 0.30, -0.78);
+const vec3 U_WOUND3 = vec3(-0.80, 0.15, -0.58);
+float woundAt(vec3 m, vec3 dir, float size) {
+    float ang = acos(clamp(dot(m, normalize(dir)), -1.0, 1.0));
+    float rag = 0.65 + 0.7 * noise3(m * 7.0 + dir * 3.0) + 0.2 * noise3(m * 19.0);
+    return 1.0 - ang / (size * rag);
+}
+float damage(vec3 m) {
+    return max(max(woundAt(m, U_WOUND1, 0.42), woundAt(m, U_WOUND2, 0.36)), woundAt(m, U_WOUND3, 0.3));
+}
+
+// the hull's plating: rows of plates like brickwork, some split into four,
+// each one raised - lit along its upper left edge, shadowed along the lower
+// right - with an inset panel, rivets at the corners, and circuit lines
+// engraved into it (a few of them glowing)
+vec3 plating(float lat, float lon, float rowsN, float diff, out float glowAmt, out vec2 plateId) {
+    float row = floor((lat + PI / 2.0) / PI * rowsN);
+    float per = max(4.0, floor(2.4 * rowsN * cos(lat)));
+    float u = (lon + PI) / (2.0 * PI) * per + 0.5 * mod(row, 2.0);
+    vec2 f = vec2(fract(u), fract((lat + PI / 2.0) / PI * rowsN));
+    vec2 id = vec2(floor(u), row);
+    // a quarter of the plates are split into four smaller ones
+    if (hash(id + 5.5) > 0.75) { id = id * 2.0 + floor(f * 2.0) + 1000.0; f = fract(f * 2.0); }
+    plateId = id;
+    float h = hash(id);
+    float bw = 0.17;
+    float lit = (1.0 - smoothstep(0.0, bw, f.x)) + (1.0 - smoothstep(0.0, bw, 1.0 - f.y));
+    float shade = (1.0 - smoothstep(0.0, bw, 1.0 - f.x)) + (1.0 - smoothstep(0.0, bw, f.y));
+    float seam = 1.0 - smoothstep(0.0, 0.045, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+    vec3 base = mix(vec3(0.13, 0.14, 0.23), vec3(0.32, 0.33, 0.46), h * h);
+    vec3 col = base * diff * (1.0 + 0.95 * lit - 0.75 * shade);
+    // an inset panel on half of them, with its own (reversed) bevel
+    vec2 g = abs(f - 0.5);
+    float inset = step(0.5, hash(id + 1.3));
+    float ie = 0.32 - max(g.x, g.y);
+    float inRim = inset * smoothstep(0.03, 0.0, abs(ie));
+    col *= 1.0 - inRim * 0.35 * sign(f.y - f.x + 0.0001);
+    // engraved circuit lines: a maze on a 5x5 grid inside the plate
+    vec2 cg = f * 5.0, ci = floor(cg), cf = fract(cg);
+    float hz = step(0.55, hash(id * 3.1 + ci));
+    float trace = hz * smoothstep(0.09, 0.03, abs(cf.y - 0.5)) + (1.0 - hz) * step(0.6, hash(id + ci * 1.7)) * smoothstep(0.09, 0.03, abs(cf.x - 0.5));
+    trace *= step(0.12, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+    float glowing = step(0.82, hash(id + 9.1));
+    col *= 1.0 - trace * 0.4;
+    glowAmt = trace * glowing * 0.55;
+    // rivets
+    vec2 rv = abs(f - 0.5);
+    float rivet = smoothstep(0.04, 0.02, length(rv - vec2(0.39)));
+    col += rivet * 0.12 * diff;
+    col *= 1.0 - seam * 0.9;
+    col = mix(col, col + glowColor.rgb * 0.05, 0.5);
+    return col;
+}
+
 vec3 unicronSurface(vec3 n, out float glowAmt, out float hot) {
     vec3 m = transpose(mat3(rotation)) * n;
     float lat = asin(clamp(m.y, -1.0, 1.0));
@@ -203,16 +269,10 @@ vec3 unicronSurface(vec3 n, out float glowAmt, out float hot) {
     float diff = 0.22 + 0.78 * max(dot(n, L), 0.0);
     glowAmt = 0.0; hot = 0.0;
 
-    // the hull: courses of small plates, each row offset like brickwork
-    float rowsN = rings * 1.1;
-    float row = floor((lat + PI / 2.0) / PI * rowsN);
-    float per = max(4.0, floor(2.4 * rowsN * cos(lat)));
-    float u = (lon + PI) / (2.0 * PI) * per + 0.5 * mod(row, 2.0);
-    vec2 f = vec2(fract(u), fract((lat + PI / 2.0) / PI * rowsN));
-    vec2 id = vec2(floor(u), row);
-    float seam = 1.0 - smoothstep(0.0, 0.08, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
-    vec3 hull = mix(vec3(0.13, 0.13, 0.22), vec3(0.19, 0.19, 0.30), hash(id)) * (1.0 - 0.45 * seam);
-    hull = mix(hull, hull + glowColor.rgb * 0.05, 0.5);
+    // the hull: raised plates, engraved
+    float plateGlow;
+    vec2 plateId;
+    vec3 hull = plating(lat, lon, rings * 0.7, 1.0, plateGlow, plateId);
 
     // the armour cap: grey, cratered, a jagged lower edge
     float edge = 0.30 + 0.07 * sin(lon * 4.0 + 0.7) + 0.04 * sin(lon * 13.0) + 0.025 * sin(lon * 29.0 + 2.0);
@@ -226,8 +286,14 @@ vec3 unicronSurface(vec3 n, out float glowAmt, out float hot) {
     capCol = mix(capCol, vec3(0.12, 0.12, 0.17), trench);
     // the cap's shadowed lip
     float lip = smoothstep(0.035, 0.0, m.y - edge) * step(edge - 0.035, m.y);
+    // the cap is plated too, finer and fainter
+    float capGlow;
+    vec2 capId;
+    vec3 capPlates = plating(lat, lon, rings * 1.6, 1.0, capGlow, capId);
+    capCol *= 0.75 + 0.6 * dot(capPlates, vec3(0.33)) / 0.2 * 0.5;
     vec3 col = mix(hull, capCol, cap) * diff;
     col *= 1.0 - lip * 0.6;
+    glowAmt += plateGlow * (1.0 - cap);
 
     // the belt round the middle, ribbed, its edges lit
     float bd = dot(m, normalize(U_BELT));
@@ -243,6 +309,39 @@ vec3 unicronSurface(vec3 n, out float glowAmt, out float hot) {
     float vd = length(fract(vc) - 0.5);
     glowAmt += vent * smoothstep(0.17, 0.09, vd);
     col *= 1.0 - vent * smoothstep(0.22, 0.17, vd) * 0.6;
+
+    // the wounds: the plating crumbles away at the fringe - smaller and
+    // smaller fragments dropping out, their broken edges glowing - into the
+    // open wound, where the machinery inside shows: a dark recess, girders,
+    // and the hot maze of its workings
+    float dmg = damage(m);
+    if (dmg > 0.0) {
+        // inside: recessed, lit from within
+        vec2 ig = vec2(lon * 26.0, lat * 26.0);
+        vec2 ic = floor(ig), icf = fract(ig);
+        float girder = smoothstep(0.1, 0.0, min(abs(icf.x - 0.5), abs(icf.y - 0.5)) - 0.02) * step(0.5, hash(ic + 2.0));
+        vec2 mg = vec2(lon * 60.0, lat * 60.0);
+        vec2 mi = floor(mg), mf = fract(mg);
+        float mz = step(0.5, hash(mi)) * smoothstep(0.14, 0.04, abs(mf.y - 0.5)) + step(0.5, hash(mi + 7.0)) * smoothstep(0.14, 0.04, abs(mf.x - 0.5));
+        float pulse = 0.75 + 0.25 * sin(time * 2.0 + hash(floor(mg / 6.0)) * 6.28);
+        vec3 inner = vec3(0.03, 0.025, 0.04) * diff + vec3(0.12, 0.1, 0.12) * girder * diff;
+        float innerGlow = mz * pulse * 0.9 * smoothstep(0.3, 0.6, dmg) + 0.25 * smoothstep(0.3, 0.9, dmg);
+        // the fringe: fragments of plate, each dropped once the damage passes it
+        vec2 fg = vec2(lon, lat) * mix(30.0, 90.0, clamp(dmg / 0.3, 0.0, 1.0));
+        vec2 fi = floor(fg), ff = fract(fg);
+        float stays = step(dmg / 0.3, hash(fi + 13.0));
+        float fragEdge = smoothstep(0.12, 0.0, min(min(ff.x, 1.0 - ff.x), min(ff.y, 1.0 - ff.y)));
+        float open = smoothstep(0.3, 0.32, dmg);
+        float gone = max(open, 1.0 - stays);
+        col = mix(col, inner, gone);
+        glowAmt = mix(glowAmt, innerGlow, gone);
+        hot += gone * mz * pulse * 0.25 * smoothstep(0.4, 0.8, dmg);
+        // broken edges of the fragments still standing, glowing hot
+        glowAmt += (1.0 - gone) * fragEdge * smoothstep(0.05, 0.3, dmg) * 0.9;
+    }
+    // a scorched rim round each wound
+    float scorch = smoothstep(-0.12, 0.0, dmg) * (1.0 - step(0.0, dmg));
+    col *= 1.0 - scorch * 0.45;
 
     // the eye-vent: a great glowing disc in a dark socket
     float ea = angTo(m, U_EYE);
@@ -334,6 +433,40 @@ vec4 unicron(vec2 d, float r2) {
         beam *= (0.85 + 0.15 * sin(time * 7.0)) * facing;
         col += mix(hotCol, dotColor.rgb, smoothstep(0.0, 1.5, along)) * beam * 1.1;
         a = max(a, beam * 0.9);
+    }
+
+    // debris drifting out of the wounds: chunks of plate tumbling away and
+    // embers, fanning out from each wound (all round it when it faces you,
+    // off the edge when it's side-on, only past the rim when it's behind)
+    for (int w = 0; w < 3; w++) {
+        vec3 dir = w == 0 ? U_WOUND1 : w == 1 ? U_WOUND2 : U_WOUND3;
+        vec3 pv = mat3(rotation) * normalize(dir);
+        float vis = smoothstep(-0.6, 0.0, pv.z);
+        if (vis <= 0.0) continue;
+        vec2 o = pv.xy;
+        float side = clamp(length(o), 0.0, 1.0);
+        vec2 outward = side > 0.05 ? normalize(o) : vec2(0.0, 1.0);
+        for (int k = 0; k < 26; k++) {
+            float kk = float(k) + float(w) * 31.0;
+            float t = fract(time * (0.025 + 0.05 * hash(vec2(kk, 1.0))) + hash(vec2(kk, 2.0)));
+            float spread = mix(6.2832, 2.0, side);
+            float an = (hash(vec2(kk, 3.0)) - 0.5) * spread;
+            vec2 dk = mat2(cos(an), sin(an), -sin(an), cos(an)) * outward;
+            vec2 pos = o * (0.9 + 0.1 * side) + dk * t * (0.45 + 1.0 * hash(vec2(kk, 4.0)));
+            if (pv.z < 0.0 && dot(pos, pos) < 1.0) continue;        // behind the globe
+            float sz = (0.012 + 0.03 * hash(vec2(kk, 5.0))) * (1.0 - 0.4 * t);
+            float spin = time * (hash(vec2(kk, 6.0)) - 0.5) * 3.0 + kk;
+            vec2 q = mat2(cos(spin), sin(spin), -sin(spin), cos(spin)) * (d - pos);
+            float ember = step(0.65, hash(vec2(kk, 7.0)));
+            vec2 bx = abs(q) - vec2(sz, sz * 0.55) * mix(1.0, 0.45, ember);
+            float inside = 1.0 - smoothstep(-0.002, 0.002, max(bx.x, bx.y));
+            if (inside <= 0.0) continue;
+            float fade = (1.0 - smoothstep(0.7, 1.0, t)) * smoothstep(0.0, 0.05, t) * vis;
+            float litEdge = smoothstep(-sz * 0.5, 0.0, -q.y - q.x * 0.3);
+            vec3 chunk = mix(vec3(0.18, 0.19, 0.29) * (0.5 + 0.9 * litEdge), dotColor.rgb * 1.3 + 0.15, ember);
+            col = mix(col, chunk, inside * fade);
+            a = max(a, inside * fade);
+        }
     }
 
     float halo = exp(-max(rr - 1.0, 0.0) * 9.0) * smoothstep(0.92, 1.0, rr);
