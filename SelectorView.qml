@@ -226,9 +226,13 @@ FocusScope {
     // apply: `omarchy theme set`, a hard glitch, and stay open
     Process {
         id: applier
+        property bool thenClose: false
         onExited: (code) => {
             terminal.push(code === 0 ? "> theme applied :: " + applier.name : "> theme failed (" + code + ") :: " + applier.name)
             themeReader.running = true                       // the active one has changed
+            // glitching out: only now that the theme is fully on, after a
+            // beat for the background's fade, so the desktop shows it
+            if (thenClose) { thenClose = false; outAfterApply.restart() }
         }
         property string name: ""
     }
@@ -237,6 +241,7 @@ FocusScope {
         if (t.current) { terminal.push("> already running :: " + t.name); fireGlitch("tear", 0.4 * glitchLevel); return }
         if (applier.running) return
         applier.name = t.name
+        applier.thenClose = settings.afterApply === "close"
         applier.command = ["omarchy-theme-set", t.name]
         applier.running = true
         if (glitchLevel > 0) {
@@ -244,10 +249,10 @@ FocusScope {
             stutter.left = 2; stutter.restart()                  // and it keeps fighting it
         }
         terminal.scrawl(["> rewriting palette :: " + t.slug, "> pushing to the shell, terminals, editors..."])
-        if (settings.afterApply === "close") outAfterApply.restart()
     }
-    // options: after applying, glitch out to the desktop to watch it land
-    Timer { id: outAfterApply; interval: 260; onTriggered: if (view.closeRequest) view.closeRequest() }
+    // options: after applying, glitch out to the desktop - once it's all on
+    // (started when theme set returns, above)
+    Timer { id: outAfterApply; interval: 700; onTriggered: if (view.closeRequest) view.closeRequest() }
 
     // ------------------------------------------------------------------ time
     property real t: 0
