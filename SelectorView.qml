@@ -252,7 +252,7 @@ FocusScope {
     }
     // options: after applying, glitch out to the desktop - once it's all on
     // (started when theme set returns, above)
-    Timer { id: outAfterApply; interval: 700; onTriggered: if (view.closeRequest) view.closeRequest() }
+    Timer { id: outAfterApply; interval: 1100; onTriggered: if (view.closeRequest) view.closeRequest() }
 
     // ------------------------------------------------------------------ time
     property real t: 0
