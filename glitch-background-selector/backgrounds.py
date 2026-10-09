@@ -54,11 +54,11 @@ def main():
     except OSError:
         current = ""
     # a picture set in another fit is a rendered copy: report the original
-    mode = "fill"
+    mode, look = "fill", "clean"
     try:
         hit = json.load(open(os.path.expanduser("~/.cache/glitch-background-selector/rendered/map.json"))).get(current)
         if hit:
-            current, mode = hit["source"], hit["mode"]
+            current, mode, look = hit["source"], hit["mode"], hit.get("look", "clean")
     except (OSError, ValueError):
         pass
     seen, items = set(), []
@@ -77,7 +77,7 @@ def main():
     if folder:
         for p in walk(folder):
             add(p, "folder")
-    print(json.dumps({"theme": theme, "current": current, "mode": mode, "folder": folder, "items": items}))
+    print(json.dumps({"theme": theme, "current": current, "mode": mode, "look": look, "folder": folder, "items": items}))
 
 
 if __name__ == "__main__":

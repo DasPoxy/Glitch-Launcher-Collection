@@ -17,6 +17,12 @@ and [Glitch-Globe-Launcher](../glitch-globe-launcher).
   rain look (Tab).
 - **The readout**: its name, folder, section, size and shape, and its
   colours (the eight that stand out, most common first).
+- **The look on your desktop too** (options > Desktop look): **Baked**
+  renders the monitor's look (grid, glyph or rain) into the picture when
+  you set it - free, but a still; **Live** draws it over the wallpaper as it
+  is on the monitor, animated (about 30 fps for rain, slower for the rest),
+  on a click-through layer just above the wallpaper, paused whenever a
+  window on that screen is fullscreen. Either way in the picture's colours.
 - **The whole UI wears the highlighted wallpaper's colours**, easing across
   as you browse.
 - **The carousel**: arc, line, hand, ring, panorama, triple, grid, pills or

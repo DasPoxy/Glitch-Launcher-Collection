@@ -24,7 +24,8 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/glitch-background-selector/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/glitch-background-selector/settings.json"
-    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true, afterApply: "stay", fit: "fill",
+    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true, afterApply: "stay", fit: "fill", desktopLook: "off",
+                              desktopColors: ["#3dff8a", "#11c46a", "#010603"],
                               folder: "~/Pictures/Wallpapers" })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
@@ -63,6 +64,7 @@ FocusScope {
     property string themeName: ""
     property string currentPath: ""
     property string currentFit: "fill"            // the fit it was set in
+    property string currentLook: "clean"          // and the look baked into it
     Process {
         id: bgReader
         command: ["python3", Qt.resolvedUrl("backgrounds.py").toString().replace(/^file:\/\//, ""), view.folderPath]
@@ -76,6 +78,7 @@ FocusScope {
                 view.themeName = d.theme || ""
                 view.currentPath = d.current || ""
                 view.currentFit = d.mode || "fill"
+                view.currentLook = d.look || "clean"
                 view.items = d.items || []
                 let i = view.shown.findIndex(b => b.path === (keep || view.currentPath))
                 if (i < 0) i = 0
@@ -275,6 +278,13 @@ FocusScope {
     }
 
     readonly property var fitModes: ["fill", "fit", "blur", "stretch", "center", "tile"]
+    // options: the monitor's look on the desktop too - "off", "baked" (a
+    // still, rendered into the picture) or "live" (GlitchBackgroundSelector's
+    // desktop layer runs the shader over the wallpaper)
+    readonly property string desktopLook: ["off", "baked", "live"].indexOf(settings.desktopLook) >= 0 ? settings.desktopLook : "off"
+    readonly property string monitorLook: ["clean", "grid", "glyph", "rain"].indexOf(settings.look) >= 0 ? settings.look : "clean"
+    readonly property string bakedLook: desktopLook === "baked" ? monitorLook : "clean"
+    function hexOf(c) { return "#" + [c.r, c.g, c.b].map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join("") }
     // set it: `omarchy theme bg set`, a hard glitch, and stay open
     Process {
         id: applier
@@ -297,16 +307,20 @@ FocusScope {
     }
     function apply(b) {
         if (!b) return
-        if (b.path === currentPath && currentFit === (fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill")) { terminal.push("> already on screen :: " + b.name); fireGlitch("tear", 0.4 * glitchLevel); return }
+        if (b.path === currentPath && currentFit === (fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill") && currentLook === bakedLook) { terminal.push("> already on screen :: " + b.name); fireGlitch("tear", 0.4 * glitchLevel); return }
         if (applier.running) return
         applier.name = b.name
         applier.pixels = view.palette.path === b.path && view.palette.w ? view.palette.w * view.palette.h : 3840 * 2160
         applier.thenClose = settings.afterApply === "close"
         // another fit than fill: render it at the screen's size first
         const fit = fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill"
-        applier.command = fit === "fill" ? ["omarchy-theme-bg-set", b.path]
-            : ["bash", "-c", "out=$(python3 \"$1\" \"$2\" \"$3\") && omarchy-theme-bg-set \"$out\"", "_",
-               Qt.resolvedUrl("render-bg.py").toString().replace(/^file:\/\//, ""), b.path, fit]
+        // the look's colours: this picture's own (as the UI wears them),
+        // kept for the live desktop layer too
+        const cols = [hexOf(pAccent), hexOf(pSecond), hexOf(Qt.darker(pDark, 1.3))]
+        if (desktopLook !== "off") setSetting("desktopColors", cols)
+        applier.command = fit === "fill" && bakedLook === "clean" ? ["omarchy-theme-bg-set", b.path]
+            : ["bash", "-c", "out=$(python3 \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" \"$6\" \"$7\") && omarchy-theme-bg-set \"$out\"", "_",
+               Qt.resolvedUrl("render-bg.py").toString().replace(/^file:\/\//, ""), b.path, fit, bakedLook, cols[0], cols[1], cols[2]]
         applier.running = true
         if (glitchLevel > 0) {
             fireGlitch(["blocks", "vhs", "crt", "bleed", "tear"][Math.floor(Math.random() * 5)], glitchLevel)
@@ -737,7 +751,8 @@ FocusScope {
                                             view.palette.w ? view.palette.w + " x " + view.palette.h : "",
                                             view.palette.w ? (view.palette.w / view.palette.h).toFixed(2) + ":1" : "",
                                             view.cur.path === view.currentPath ? "ON SCREEN" : "",
-                                            "fit: " + (view.settings.fit || "fill")].filter(x => x).join("  ·  ")
+                                            "fit: " + (view.settings.fit || "fill"),
+                                            view.desktopLook !== "off" && view.monitorLook !== "clean" ? "desktop: " + view.monitorLook + " (" + view.desktopLook + ")" : ""].filter(x => x).join("  ·  ")
                     color: view.cText; opacity: 0.75; font.family: view.mono; font.pixelSize: 11
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35) }
@@ -1118,6 +1133,23 @@ FocusScope {
                         onClicked: view.setSetting("fit", modelData[0])
                     }
                 }
+            }
+
+            Heading { text: "DESKTOP LOOK  ·  the monitor's look (TAB) on your desktop"; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Chip { label: "Off"; on: view.desktopLook === "off"; onClicked: view.setSetting("desktopLook", "off") }
+                Chip { label: "Baked"; on: view.desktopLook === "baked"; onClicked: view.setSetting("desktopLook", "baked") }
+                Chip { label: "Live"; on: view.desktopLook === "live"; onClicked: view.setSetting("desktopLook", "live") }
+            }
+            Text {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap
+                text: view.desktopLook === "baked" ? "rendered into the picture when you set it: free, but still"
+                    : view.desktopLook === "live" ? "drawn live over the wallpaper, animated (~30 fps for rain); pauses when a window is fullscreen"
+                    : "the desktop shows the picture as it is"
+                color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 10
             }
 
             Heading { text: "CAROUSEL" }
