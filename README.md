@@ -38,6 +38,13 @@ carousel, the monitor previewing blur fit:
 
 ![Background selector](screenshots/background-hand.jpg)
 
+**Glitch-Overview** - Alt+Tab across workspaces: each one live on the
+monitor, what its windows cost (CPU, memory, processes) beside it:
+
+| | |
+| --- | --- |
+| ![Overview, a file manager](screenshots/overview-files.jpg) | ![Overview, two terminals and their load](screenshots/overview-stats.jpg) |
+
 ## Install
 
 Clone it, then install all three or any of them:

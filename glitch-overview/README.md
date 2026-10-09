@@ -1,5 +1,7 @@
 # Glitch-Overview
 
+![Glitch-Overview](../screenshots/overview-files.jpg)
+
 An Alt+Tab workspace overview in the Glitch-Launcher-Collection style - a
 sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher),
 [Glitch-Theme-Selector](../glitch-theme-selector) and
