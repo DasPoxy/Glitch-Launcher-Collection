@@ -8,6 +8,9 @@ sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher),
 - **Alt+Tab**: opens on the workspace you were on before this one; Alt+Tab
   again (Alt still held) steps on, Alt+Shift+Tab steps back, and letting go
   of Alt goes there - glitching out onto it.
+  Or, in the options, **Toggle**: it stays up when you let go - Alt+Tab
+  again, Enter or a click goes to the selected workspace, Esc stays where
+  you are.
 - **The monitor**: the selected workspace on a CRT set, every window live
   (Screencopy) at its place and size, titled; the picked window outlined.
 - **The readout**: what that workspace is costing - each window's CPU and

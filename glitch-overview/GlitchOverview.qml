@@ -23,6 +23,8 @@ Item {
         try { p = typeof payloadJson === "string" ? JSON.parse(payloadJson || "{}") : (payloadJson || {}) } catch (e) {}
         const step = Number(p.step) || 0
         if (root.opened && !view.closingFx) {
+            // toggle mode: the key again goes to the one selected
+            if (view.toggleMode) { if (!view.landing) view.go(); return }
             if (step) { if (view.landing) view.pendingSteps += step; else view.step(step) }
             if (p.alt) view.altHeld = true
             return

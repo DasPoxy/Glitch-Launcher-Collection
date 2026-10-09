@@ -24,7 +24,10 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/glitch-overview/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/glitch-overview/settings.json"
-    property var settings: ({ crt: true, carousel: "line", glitch: "normal", openGlitch: true })
+    property var settings: ({ crt: true, carousel: "line", glitch: "normal", openGlitch: true, mode: "hold" })
+    // "hold": letting go of Alt goes; "toggle": it stays up - Alt+Tab again,
+    // Enter or a click goes, Esc stays where you are
+    readonly property bool toggleMode: settings.mode === "toggle"
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
         s[key] = value
@@ -466,7 +469,7 @@ FocusScope {
     }
     // Alt+Tab: letting go of Alt goes there
     Keys.onReleased: event => {
-        if (event.key === Qt.Key_Alt && altHeld && !settingsOpen) { altHeld = false; go(); event.accepted = true }
+        if (event.key === Qt.Key_Alt && altHeld && !toggleMode && !settingsOpen) { altHeld = false; go(); event.accepted = true }
     }
 
     // ------------------------------------------------------------------ scene
@@ -813,7 +816,9 @@ FocusScope {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
-            text: "[TAB / ← →] workspace   [↑ ↓] window   [1-9] jump   [ENTER] go" + (view.altHeld ? " (or let go of ALT)" : "") + "   [CTRL+T] crt   [CTRL+,] options   [ESC] stay"
+            text: "[TAB / ← →] workspace   [↑ ↓] window   [1-9] jump   [ENTER] go"
+                  + (view.toggleMode ? " (or ALT+TAB again)" : view.altHeld ? " (or let go of ALT)" : "")
+                  + "   [CTRL+T] crt   [CTRL+,] options   [ESC] stay"
             color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 12
         }
 
@@ -946,6 +951,20 @@ FocusScope {
                         onClicked: view.setSetting("carousel", modelData[0])
                     }
                 }
+            }
+
+            Heading { text: "ALT+TAB" }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Chip { label: "Hold Alt"; on: !view.toggleMode; onClicked: view.setSetting("mode", "hold") }
+                Chip { label: "Toggle"; on: view.toggleMode; onClicked: view.setSetting("mode", "toggle") }
+            }
+            Text {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap
+                text: view.toggleMode ? "stays up: ALT+TAB again, ENTER or a click goes · ESC stays" : "letting go of ALT goes"
+                color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 10
             }
 
             Heading { text: "SCREEN" }
