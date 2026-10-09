@@ -275,9 +275,20 @@ FocusScope {
     Process {
         id: applier
         property string name: ""
+        property real pixels: 0                              // its size, to judge the decode
+        property bool thenClose: false
         onExited: (code) => {
             terminal.push(code === 0 ? "> wallpaper set :: " + applier.name : "> failed (" + code + ") :: " + applier.name)
             bgReader.running = true                          // the one in use has changed
+            if (thenClose) {
+                thenClose = false
+                // the shell's background now decodes the picture and fades it
+                // in (420 ms): go once that's surely done, so the desktop we
+                // glitch out to already shows it
+                outAfterApply.interval = Math.min(1800, 520 + applier.pixels / 30000)
+                outAfterApply.restart()
+                if (code === 0) terminal.push("> letting the backdrop settle...")
+            }
         }
     }
     function apply(b) {
@@ -285,6 +296,8 @@ FocusScope {
         if (b.path === currentPath) { terminal.push("> already on screen :: " + b.name); fireGlitch("tear", 0.4 * glitchLevel); return }
         if (applier.running) return
         applier.name = b.name
+        applier.pixels = view.palette.path === b.path && view.palette.w ? view.palette.w * view.palette.h : 3840 * 2160
+        applier.thenClose = settings.afterApply === "close"
         applier.command = ["omarchy-theme-bg-set", b.path]
         applier.running = true
         if (glitchLevel > 0) {
@@ -292,10 +305,10 @@ FocusScope {
             stutter.left = 2; stutter.restart()                  // and it keeps fighting it
         }
         terminal.scrawl(["> repainting the backdrop :: " + b.name])
-        if (settings.afterApply === "close") outAfterApply.restart()
     }
-    // options: after applying, glitch out to the desktop to watch it land
-    Timer { id: outAfterApply; interval: 260; onTriggered: if (view.closeRequest) view.closeRequest() }
+    // options: after setting one, glitch out to the desktop - but only once the
+    // shell has actually put it up (started when bg set returns, above)
+    Timer { id: outAfterApply; interval: 900; onTriggered: if (view.closeRequest) view.closeRequest() }
 
     // ------------------------------------------------------------------ time
     property real t: 0
