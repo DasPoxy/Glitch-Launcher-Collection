@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Globe-Launcher's 3D model preview: a turntable of a model, rendered to PNG
+"""Glitch-Globe-Launcher's 3D model preview: a turntable of a model, rendered to PNG
 frames (grey, lit, transparent background - the preview shader colours them).
 
     render-model.py MODEL CACHE_DIR

@@ -3,8 +3,8 @@ import Quickshell.Wayland
 import QtQuick
 import qs.Commons
 
-// The overlay: Globe-Launcher over the whole screen, taking the keyboard.
-//   omarchy-shell shell toggle globe-launcher '{}'
+// The overlay: Glitch-Globe-Launcher over the whole screen, taking the keyboard.
+//   omarchy-shell shell toggle glitch-globe-launcher '{}'
 Item {
     id: root
 
@@ -17,7 +17,7 @@ Item {
     readonly property int appCount: DesktopEntries.applications ? DesktopEntries.applications.values.length : 0
 
     // a payload can ask for a glitch right away, to see one:
-    //   omarchy-shell shell summon globe-launcher '{"glitch":"vhs"}'
+    //   omarchy-shell shell summon glitch-globe-launcher '{"glitch":"vhs"}'
     // or for a traffic level: '{"net":0.8}'
     // opening with a glitch: the window maps see-through, the desktop is
     // captured through it, then the launcher glitches in over that capture
@@ -78,7 +78,7 @@ Item {
 
     function dismiss() {
         if (root.shell && typeof root.shell.hide === "function")
-            root.shell.hide((root.manifest && root.manifest.id) || "globe-launcher")     // -> close()
+            root.shell.hide((root.manifest && root.manifest.id) || "glitch-globe-launcher")     // -> close()
         else
             root.close()
     }
@@ -93,7 +93,7 @@ Item {
         visible: root.opened
         anchors { top: true; bottom: true; left: true; right: true }
         color: root.capturing || view.closingFx ? "transparent" : "black"
-        WlrLayershell.namespace: "globe-launcher"
+        WlrLayershell.namespace: "glitch-globe-launcher"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
         exclusionMode: ExclusionMode.Ignore

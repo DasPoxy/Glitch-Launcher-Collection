@@ -1,5 +1,5 @@
 #!/bin/bash
-# Globe-Launcher's file preview helper: what a file is, and something to show
+# Glitch-Globe-Launcher's file preview helper: what a file is, and something to show
 # of it. Prints one header line, "path<TAB>kind<TAB>mime<TAB>size<TAB>modified",
 # then a body by kind:
 #   text     its first lines           archive  what's in it

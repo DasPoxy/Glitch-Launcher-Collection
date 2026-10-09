@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "globe-launcher",
-  "name": "Globe-Launcher",
+  "id": "glitch-globe-launcher",
+  "name": "Glitch-Globe-Launcher",
   "version": "0.1.0",
   "author": "DasPoxy",
   "license": "MIT",
@@ -11,6 +11,6 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "overlay": "GlobeLauncher.qml"
+    "overlay": "GlitchGlobeLauncher.qml"
   }
 }

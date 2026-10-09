@@ -5,7 +5,7 @@ import Quickshell.Io
 import Quickshell.Widgets
 import qs.Commons
 
-// Globe-Launcher's scene: a starfield (with traffic), the globe, your apps -
+// Glitch-Globe-Launcher's scene: a starfield (with traffic), the globe, your apps -
 // or Omarchy's commands after ">", or files after "/" - projected out from it,
 // and the terminal HUD, all through a glitch pass. Spin the globe (drag,
 // arrow keys, or let it turn); whatever faces you is the selected app, which
@@ -18,8 +18,8 @@ FocusScope {
     signal launched()
 
     // ---------------------------------------------------------------- settings
-    // ~/.config/globe-launcher/settings.json
-    readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
+    // ~/.config/glitch-globe-launcher/settings.json
+    readonly property string settingsPath: Quickshell.env("HOME") + "/.config/glitch-globe-launcher/settings.json"
     property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, netStyle: "streams", nebula: true, crt: false, openGlitch: true, preview: "grid",
                               glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed"],
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
@@ -43,7 +43,7 @@ FocusScope {
             } catch (e) {}
         }
     }
-    Process { running: true; command: ["mkdir", "-p", Quickshell.env("HOME") + "/.config/globe-launcher"] }
+    Process { running: true; command: ["mkdir", "-p", Quickshell.env("HOME") + "/.config/glitch-globe-launcher"] }
 
     // ------------------------------------------------------------------ themes
     readonly property var themes: ({
@@ -193,7 +193,7 @@ FocusScope {
     }
 
     // files: an index of your home (fd) when "/" is typed, then fzf picks
-    readonly property string fileIndex: Quickshell.env("HOME") + "/.cache/globe-launcher/files.txt"
+    readonly property string fileIndex: Quickshell.env("HOME") + "/.cache/glitch-globe-launcher/files.txt"
     property var files: []
     Process {
         id: fileIndexer
@@ -513,7 +513,7 @@ FocusScope {
     property real netUp: 0
     property real netDownLevel: 0
     property real netUpLevel: 0
-    property real netTest: 0          // a level to show regardless (see GlobeLauncher.open)
+    property real netTest: 0          // a level to show regardless (see GlitchGlobeLauncher.open)
     Behavior on netDownLevel { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
     Behavior on netUpLevel { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
     property var netLast: null
@@ -1292,7 +1292,7 @@ FocusScope {
         property var desk: deskTex
         fragmentShader: Qt.resolvedUrl("shaders/glitch.frag.qsb")
     }
-    // the desktop as it was when the launcher opened (GlobeLauncher captures
+    // the desktop as it was when the launcher opened (GlitchGlobeLauncher captures
     // it), for the opening transition
     property var deskItem: null
     ShaderEffectSource { id: deskTex; sourceItem: view.deskItem; hideSource: true; live: true; visible: false }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Globe-Launcher's terminal readout for a file: a few "key value" lines the
+# Glitch-Globe-Launcher's terminal readout for a file: a few "key value" lines the
 # corner terminal types out when you linger on it.
 # usage: info.sh FILE
 

@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 
-// Globe-Launcher's sky traffic, behind the globe: shooting stars now and then,
+// Glitch-Globe-Launcher's sky traffic, behind the globe: shooting stars now and then,
 // a comet once in a while, and spacecraft crossing in the distance. Colours
 // come from the theme (`primary` lights the craft and tints the tails).
 Item {

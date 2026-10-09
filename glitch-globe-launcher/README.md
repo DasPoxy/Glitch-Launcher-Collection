@@ -1,4 +1,4 @@
-# Globe-Launcher
+# Glitch-Globe-Launcher
 
 A full-screen app launcher for [Omarchy](https://omarchy.org): your installed
 apps, projected out from a spinning dot-globe over a starfield, with the feel
@@ -63,11 +63,11 @@ of being jacked into a terminal.
   characters) or rain (code falling through it) - and text files' first
   lines, archives' contents, audio tags. 3D models (STL, 3MF, OBJ) spin on a
   turntable rendered by `render-model.py` (Python + Pillow, cached in
-  `~/.cache/globe-launcher/models`), through the same looks.
+  `~/.cache/glitch-globe-launcher/models`), through the same looks.
 - **Options** (Ctrl+, or the button top right): colours from your Omarchy
   theme, a prebuilt theme (Matrix, Cyber, Ice, Amber, Mono) or your own,
   the globe's style, auto-spin, nebula, network and space traffic, the preview's look, and glitches normal / subtle / off and which kinds. Saved in
-  `~/.config/globe-launcher/settings.json`.
+  `~/.config/glitch-globe-launcher/settings.json`.
 
 Clicking the selected app (or Enter) launches it and closes the launcher;
 clicking another app turns the globe to it.
@@ -75,19 +75,19 @@ clicking another app turns the globe to it.
 ## Install
 
 ```sh
-omarchy plugin add https://github.com/DasPoxy/globe-launcher.git --enable
+omarchy plugin add https://github.com/DasPoxy/glitch-globe-launcher.git --enable
 ```
 
 Open it with:
 
 ```sh
-omarchy-shell shell toggle globe-launcher '{}'
+omarchy-shell shell toggle glitch-globe-launcher '{}'
 ```
 
 and give it a key in `~/.config/hypr/bindings.lua`, for example:
 
 ```lua
-o.bind("SUPER + ALT + SPACE", "Globe-Launcher", "omarchy-shell shell toggle globe-launcher '{}'")
+o.bind("SUPER + ALT + SPACE", "Glitch-Globe-Launcher", "omarchy-shell shell toggle glitch-globe-launcher '{}'")
 ```
 
 ## How it's drawn

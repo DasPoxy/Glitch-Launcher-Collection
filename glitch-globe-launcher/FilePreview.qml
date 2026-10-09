@@ -4,7 +4,7 @@ import QtMultimedia
 import Quickshell
 import Quickshell.Io
 
-// Globe-Launcher's file preview: a terminal pane beside the globe for the
+// Glitch-Globe-Launcher's file preview: a terminal pane beside the globe for the
 // selected file. Pictures, videos (muted, looping) and PDFs' first pages go
 // through the preview shader in the chosen look; text shows its first lines;
 // archives what's in them; audio its tags; anything else what file(1) says.
@@ -37,7 +37,7 @@ Rectangle {
     // a 3D model: render-model.py turns it on a turntable, frame by frame
     // (cached); it spins through them once they're all in
     readonly property string renderer: Qt.resolvedUrl("render-model.py").toString().replace(/^file:\/\//, "")
-    readonly property string modelCache: Quickshell.env("HOME") + "/.cache/globe-launcher/models"
+    readonly property string modelCache: Quickshell.env("HOME") + "/.cache/glitch-globe-launcher/models"
     readonly property int modelFrames: 24
     property var frames: []
     property int frame: 0
@@ -61,7 +61,7 @@ Rectangle {
     property real reveal: 1
 
     readonly property string helper: Qt.resolvedUrl("preview.sh").toString().replace(/^file:\/\//, "")
-    readonly property string thumbs: Quickshell.env("HOME") + "/.cache/globe-launcher/thumbs"
+    readonly property string thumbs: Quickshell.env("HOME") + "/.cache/glitch-globe-launcher/thumbs"
 
     color: Qt.rgba(bg.r, bg.g, bg.b, 0.86)
     radius: 6
