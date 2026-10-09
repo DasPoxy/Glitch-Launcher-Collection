@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "glitch-overview",
   "name": "Glitch-Overview",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "author": "DasPoxy",
   "license": "MIT",
   "description": "An Alt+Tab workspace overview in the Glitch-Launcher-Collection style: every workspace's windows live on a CRT, what each window costs scrawled beside it; fully keyboard driven.",

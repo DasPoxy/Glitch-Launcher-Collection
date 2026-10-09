@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "glitch-background-selector",
   "name": "Glitch-Background-Selector",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "author": "DasPoxy",
   "license": "MIT",
   "description": "An Omarchy wallpaper selector in an old-monitor, glitchy matrix/cyberpunk style: the theme's wallpapers first, then your own folder, on a CRT with each one's colours read out. Enter sets it.",

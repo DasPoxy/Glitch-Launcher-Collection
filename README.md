@@ -4,6 +4,14 @@ Four Omarchy shell plugins with one look - old CRT monitors, matrix code,
 starfields and nebulae, screens that glitch in over your desktop and back
 out again:
 
+
+> **Beta.** So far these have only been used on their author's machine.
+> They change nothing irreversibly - `./install.sh remove` gives Omarchy's own
+> keys back - but they lean on details of Omarchy's Quickshell shell that an
+> update can change. Run `./install.sh doctor` first, and please
+> [report what happens](../../issues/new?template=bug.md). See the
+> [changelog](CHANGELOG.md).
+
 | Component | Folder | What it is | Key (with `--keys`) |
 | --- | --- | --- | --- |
 | **Glitch-Globe-Launcher** | [`glitch-globe-launcher`](glitch-globe-launcher) | an app launcher: your apps projected out from a spinning globe; `>` Omarchy commands, `/` files with previews | Super + Space |

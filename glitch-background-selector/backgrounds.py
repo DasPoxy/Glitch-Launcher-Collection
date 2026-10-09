@@ -6,7 +6,8 @@
 {theme, current, items: [{path, name, section, dir}]} - the current theme's
 wallpapers first (your own for it in ~/.config/omarchy/backgrounds/<theme>,
 then the theme's, sorted, as Omarchy cycles them), then the images under
-FOLDER (a few levels deep, sorted by path), each listed once.
+FOLDER (a few levels deep: each folder's own first, then its subfolders',
+alphabetically), each listed once.
 """
 import json
 import os
@@ -56,7 +57,8 @@ def main():
     # a picture set in another fit is a rendered copy: report the original
     mode, look = "fill", "clean"
     try:
-        hit = json.load(open(os.path.expanduser("~/.cache/glitch-background-selector/rendered/map.json"))).get(current)
+        with open(os.path.expanduser("~/.cache/glitch-background-selector/rendered/map.json")) as f:
+            hit = json.load(f).get(current)
         if hit:
             current, mode, look = hit["source"], hit["mode"], hit.get("look", "clean")
     except (OSError, ValueError):

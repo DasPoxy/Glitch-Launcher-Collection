@@ -10,6 +10,7 @@
 #                                  up) so Omarchy's own key works again;
 #                                  --purge also deletes its settings and cache
 #   ./install.sh list
+#   ./install.sh doctor             what's missing on this machine, and what it affects
 #
 # --keys also binds each installed component's key in
 # ~/.config/hypr/bindings.lua (backing it up first):
@@ -95,6 +96,37 @@ bind_keys() {
   hyprctl reload >/dev/null 2>&1 || true
 }
 
+# what each component needs, and what goes missing without it
+doctor() {
+  local miss=0 ver
+  have() { command -v "$1" >/dev/null 2>&1; }
+  need_cmd() {     # need_cmd CMD "what for" [required]
+    if have "$1"; then printf '  ok       %-22s %s\n' "$1" "$2"
+    elif [[ ${3:-} == required ]]; then printf '  MISSING  %-22s %s\n' "$1" "$2"; miss=1
+    else printf '  missing  %-22s %s (optional)\n' "$1" "$2"; fi
+  }
+  ver=$(pacman -Q omarchy 2>/dev/null | awk '{print $2}' | cut -d- -f1)
+  echo "Omarchy ${ver:-?} (this collection was made on 4.0.x)"
+  need_cmd omarchy-shell "the shell these plugins run in" required
+  need_cmd hyprctl "Hyprland: keys, the overview" required
+  need_cmd python3 "the helpers (themes, wallpapers, previews, the overview's load)" required
+  if python3 -c "import PIL" 2>/dev/null; then printf '  ok       %-22s %s\n' "Pillow (python-pillow)" "wallpaper colours, fits and looks, 3D models"
+  else printf '  MISSING  %-22s %s\n' "Pillow (python-pillow)" "background selector colours / fits / baked looks, 3D model previews"; miss=1; fi
+  need_cmd fd "launcher: the / file search index"
+  need_cmd fzf "launcher: the / file search"
+  need_cmd ffprobe "previews: video and audio details (ffmpeg)"
+  need_cmd pdftoppm "previews: PDF first pages (poppler)"
+  need_cmd bsdtar "previews: what's in an archive (libarchive)"
+  need_cmd xdg-open "opening files from the launcher"
+  local fonts; fonts=$(fc-list : family 2>/dev/null || true)
+  if [[ ${fonts,,} == *"noto sans cjk"* ]]; then printf '  ok       %-22s %s\n' "Noto Sans CJK" "the glyph and rain looks' katakana"
+  else printf '  missing  %-22s %s (optional)\n' "Noto Sans CJK" "katakana in the glyph / rain looks (noto-fonts-cjk)"; fi
+  if [[ -d /usr/lib/qt6/qml/QtMultimedia ]]; then printf '  ok       %-22s %s\n' "Qt Multimedia" "video in previews"
+  else printf '  missing  %-22s %s (optional)\n' "Qt Multimedia" "video in previews (qt6-multimedia)"; fi
+  (( miss )) && echo "Something required is missing: install it before the components that need it." || echo "Everything required is here."
+  return 0
+}
+
 installed() {                    # components installed right now
   local k
   for k in "${ORDER[@]}"; do [[ -d $PLUGINS/${DIR[$k]} ]] && echo "$k"; done
@@ -104,6 +136,9 @@ need rsync; need jq; need omarchy
 
 cmd=${1:-all}
 case $cmd in
+  doctor)
+    doctor
+    ;;
   list)
     for k in "${ORDER[@]}"; do
       printf '%-11s %-28s %s\n' "$k" "${DIR[$k]}" "$([[ -d $PLUGINS/${DIR[$k]} ]] && echo installed || echo -)"
@@ -192,6 +227,7 @@ PY
     done
     (( ${#comps[@]} )) || comps=("${ORDER[@]}")
     mapfile -t comps < <(printf '%s\n' "${comps[@]}" | awk '!seen[$0]++')
+    doctor | grep -E "MISSING|^Something" || true
     ids=()
     for k in "${comps[@]}"; do install_one "$k"; ids+=("${DIR[$k]}"); done
     enable_all "${ids[@]}"

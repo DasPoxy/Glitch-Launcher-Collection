@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "glitch-theme-selector",
   "name": "Glitch-Theme-Selector",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "author": "DasPoxy",
   "license": "MIT",
   "description": "An Omarchy theme selector in an old-monitor, glitchy matrix/cyberpunk style: browse every theme's preview and full palette on a glitching CRT, apply with Enter.",

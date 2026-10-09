@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "glitch-globe-launcher",
   "name": "Glitch-Globe-Launcher",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "author": "DasPoxy",
   "license": "MIT",
   "description": "A full-screen app launcher: your apps projected out from a spinning dot-globe over a starfield, with a jacked-in terminal feel. Spin it, type to filter, Enter to launch.",
