@@ -53,6 +53,14 @@ def main():
         current = os.path.realpath(os.readlink(os.path.join(STATE, "background")))
     except OSError:
         current = ""
+    # a picture set in another fit is a rendered copy: report the original
+    mode = "fill"
+    try:
+        hit = json.load(open(os.path.expanduser("~/.cache/glitch-background-selector/rendered/map.json"))).get(current)
+        if hit:
+            current, mode = hit["source"], hit["mode"]
+    except (OSError, ValueError):
+        pass
     seen, items = set(), []
 
     def add(path, section):
@@ -69,7 +77,7 @@ def main():
     if folder:
         for p in walk(folder):
             add(p, "folder")
-    print(json.dumps({"theme": theme, "current": current, "folder": folder, "items": items}))
+    print(json.dumps({"theme": theme, "current": current, "mode": mode, "folder": folder, "items": items}))
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/glitch-background-selector/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/glitch-background-selector/settings.json"
-    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true, afterApply: "stay",
+    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true, afterApply: "stay", fit: "fill",
                               folder: "~/Pictures/Wallpapers" })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
@@ -61,6 +61,7 @@ FocusScope {
     property var items: []
     property string themeName: ""
     property string currentPath: ""
+    property string currentFit: "fill"            // the fit it was set in
     Process {
         id: bgReader
         command: ["python3", Qt.resolvedUrl("backgrounds.py").toString().replace(/^file:\/\//, ""), view.folderPath]
@@ -73,6 +74,7 @@ FocusScope {
                 view.landOnCurrent = false
                 view.themeName = d.theme || ""
                 view.currentPath = d.current || ""
+                view.currentFit = d.mode || "fill"
                 view.items = d.items || []
                 let i = view.shown.findIndex(b => b.path === (keep || view.currentPath))
                 if (i < 0) i = 0
@@ -271,6 +273,7 @@ FocusScope {
         revealAnim.restart(); paletteReveal.restart(); paletteSettle.restart()
     }
 
+    readonly property var fitModes: ["fill", "fit", "blur", "stretch", "center", "tile"]
     // set it: `omarchy theme bg set`, a hard glitch, and stay open
     Process {
         id: applier
@@ -285,7 +288,7 @@ FocusScope {
                 // the shell's background now decodes the picture and fades it
                 // in (420 ms): go once that's surely done, so the desktop we
                 // glitch out to already shows it
-                outAfterApply.interval = Math.min(2500, 900 + applier.pixels / 20000)
+                outAfterApply.interval = Math.min(2100, 700 + applier.pixels / 24000)
                 outAfterApply.restart()
                 if (code === 0) terminal.push("> letting the backdrop settle...")
             }
@@ -293,12 +296,16 @@ FocusScope {
     }
     function apply(b) {
         if (!b) return
-        if (b.path === currentPath) { terminal.push("> already on screen :: " + b.name); fireGlitch("tear", 0.4 * glitchLevel); return }
+        if (b.path === currentPath && currentFit === (fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill")) { terminal.push("> already on screen :: " + b.name); fireGlitch("tear", 0.4 * glitchLevel); return }
         if (applier.running) return
         applier.name = b.name
         applier.pixels = view.palette.path === b.path && view.palette.w ? view.palette.w * view.palette.h : 3840 * 2160
         applier.thenClose = settings.afterApply === "close"
-        applier.command = ["omarchy-theme-bg-set", b.path]
+        // another fit than fill: render it at the screen's size first
+        const fit = fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill"
+        applier.command = fit === "fill" ? ["omarchy-theme-bg-set", b.path]
+            : ["bash", "-c", "out=$(python3 \"$1\" \"$2\" \"$3\") && omarchy-theme-bg-set \"$out\"", "_",
+               Qt.resolvedUrl("render-bg.py").toString().replace(/^file:\/\//, ""), b.path, fit]
         applier.running = true
         if (glitchLevel > 0) {
             fireGlitch(["blocks", "vhs", "crt", "bleed", "tear"][Math.floor(Math.random() * 5)], glitchLevel)
@@ -309,6 +316,13 @@ FocusScope {
     // options: after setting one, glitch out to the desktop - but only once the
     // shell has actually put it up (started when bg set returns, above)
     Timer { id: outAfterApply; interval: 900; onTriggered: if (view.closeRequest) view.closeRequest() }
+    // ...glitching the whole while, so it runs straight into the glitch-out
+    Timer {
+        interval: 210 + Math.random() * 120
+        repeat: true
+        running: view.glitchLevel > 0 && ((applier.running && applier.thenClose) || outAfterApply.running)
+        onTriggered: view.fireGlitch(["tear", "blocks", "vhs", "bleed"][Math.floor(Math.random() * 4)], (0.3 + Math.random() * 0.35) * view.glitchLevel)
+    }
 
     // ------------------------------------------------------------------ time
     property real t: 0
@@ -583,14 +597,37 @@ FocusScope {
                     Item {
                         id: screenContent
                         anchors.fill: parent
+                        // the screen previews the chosen fit: a blurred backdrop for
+                        // blur fit (a tiny copy, scaled up), the picture laid out as
+                        // the desktop will show it (actual size scaled to the set)
+                        readonly property string fit: view.fitModes.indexOf(view.settings.fit) >= 0 ? view.settings.fit : "fill"
+                        readonly property real k: width / 2560
+                        Rectangle { anchors.fill: parent; color: view.palette.colors && view.palette.colors.length ? view.palette.colors.slice().sort((a, b) => view.lum(Qt.color(a)) - view.lum(Qt.color(b)))[0] : "black" }
+                        Image {
+                            anchors.fill: parent
+                            visible: !!view.cur && screenContent.fit === "blur"
+                            source: visible ? shot.source : ""
+                            fillMode: Image.PreserveAspectCrop
+                            sourceSize: Qt.size(48, 27)
+                            smooth: true
+                            asynchronous: true
+                            opacity: 0.55
+                        }
                         Image {
                             id: shot
-                            anchors.fill: parent
+                            readonly property bool actual: screenContent.fit === "center" || screenContent.fit === "tile"
+                            anchors.centerIn: parent
+                            width: actual && screenContent.fit === "center" && view.palette.w ? view.palette.w * screenContent.k : parent.width
+                            height: actual && screenContent.fit === "center" && view.palette.h ? view.palette.h * screenContent.k : parent.height
                             visible: !!view.cur
                             source: view.cur ? "file://" + encodeURI(view.cur.path).replace(/#/g, "%23").replace(/\?/g, "%3F") : ""
-                            fillMode: Image.PreserveAspectCrop
+                            fillMode: screenContent.fit === "fit" || screenContent.fit === "blur" ? Image.PreserveAspectFit
+                                    : screenContent.fit === "stretch" ? Image.Stretch
+                                    : screenContent.fit === "tile" ? Image.Tile
+                                    : screenContent.fit === "center" ? Image.Stretch
+                                    : Image.PreserveAspectCrop
                             asynchronous: true
-                            sourceSize: Qt.size(1400, 800)
+                            sourceSize: screenContent.fit === "tile" && view.palette.w ? Qt.size(view.palette.w * screenContent.k, view.palette.h * screenContent.k) : Qt.size(1400, 800)
                         }
                     }
                     ShaderEffectSource { id: screenTex; sourceItem: screenContent; hideSource: true; live: true; visible: false }
@@ -698,7 +735,8 @@ FocusScope {
                     text: !view.cur ? "" : [view.cur.section === "theme" ? "THEME · " + view.themeName.replace(/-/g, " ") : "YOUR FOLDER",
                                             view.palette.w ? view.palette.w + " x " + view.palette.h : "",
                                             view.palette.w ? (view.palette.w / view.palette.h).toFixed(2) + ":1" : "",
-                                            view.cur.path === view.currentPath ? "ON SCREEN" : ""].filter(x => x).join("  ·  ")
+                                            view.cur.path === view.currentPath ? "ON SCREEN" : "",
+                                            "fit: " + (view.settings.fit || "fill")].filter(x => x).join("  ·  ")
                     color: view.cText; opacity: 0.75; font.family: view.mono; font.pixelSize: 11
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35) }
@@ -1060,6 +1098,22 @@ FocusScope {
             Text {
                 text: "[ENTER] use it   ·   empty: the theme's wallpapers only"
                 color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 10
+            }
+
+            Heading { text: "WALLPAPER FIT" }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Repeater {
+                    model: [["fill", "Fill"], ["fit", "Fit"], ["blur", "Blur fit"], ["stretch", "Stretch"], ["center", "Center"], ["tile", "Tile"]]
+                    delegate: Chip {
+                        required property var modelData
+                        label: modelData[1]
+                        on: (view.fitModes.indexOf(view.settings.fit) >= 0 ? view.settings.fit : "fill") === modelData[0]
+                        onClicked: view.setSetting("fit", modelData[0])
+                    }
+                }
             }
 
             Heading { text: "CAROUSEL" }

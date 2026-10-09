@@ -25,8 +25,10 @@ and [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
   up now and then, a light glitch as you browse, and glitching in over your
   desktop and back out to it.
 
-**Options** (Ctrl+, or the button top right): the wallpapers folder, the
-carousel style, the monitor's look, CRT on / off, glitches normal / subtle /
+**Options** (Ctrl+, or the button top right): the wallpapers folder, how
+the wallpaper fits the screen (fill, fit, blur fit, stretch, center, tile -
+anything but fill is rendered at the screen's size by `render-bg.py`, since
+the shell always crops to fill), the carousel style, the monitor's look, CRT on / off, glitches normal / subtle /
 off, the open / close glitch, and whether setting a wallpaper leaves it open
 or glitches out to the desktop. Kept in
 `~/.config/glitch-background-selector/settings.json`.
