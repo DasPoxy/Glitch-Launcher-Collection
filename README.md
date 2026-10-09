@@ -73,12 +73,30 @@ Then:
 
 ```sh
 ./install.sh update           # pull the latest, refresh what's installed
-./install.sh remove theme     # take one out (or: remove all)
+./install.sh remove theme     # take one out (or: remove all) - see Uninstall
 ./install.sh list             # what's installed
 ```
 
 Needs `rsync` and `jq`; the selectors and the overview use Python 3 (the selectors with Pillow), the launcher
 also `fd` and `fzf` for its file search.
+
+## Uninstall
+
+```sh
+./install.sh remove all            # or any of: globe theme background overview
+./install.sh remove all --purge    # ...and delete their settings and caches
+```
+
+It says what it will do and asks first (`--yes` skips the question), then
+for each component: disables and removes the plugin, and comments out its
+keys in `~/.config/hypr/bindings.lua` (backed up first) - including the
+`hl.unbind` that took the key from Omarchy, so Omarchy's own bind for it
+(the menu on Super + Space, window cycling on Alt + Tab...) works again.
+Settings (`~/.config/glitch-*`) and caches (`~/.cache/glitch-*`) are kept
+unless you add `--purge`. Then you can delete the clone.
+
+If Glitch-Background-Selector set a baked or rendered wallpaper, it stays
+your wallpaper; pick another with Omarchy's background switcher.
 
 ## License
 

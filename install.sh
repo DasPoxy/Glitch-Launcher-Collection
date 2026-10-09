@@ -4,7 +4,11 @@
 #
 #   ./install.sh [all | globe | theme | background | overview ...] [--keys]
 #   ./install.sh update            pull the latest, refresh what's installed
-#   ./install.sh remove COMPONENT ...
+#   ./install.sh remove COMPONENT ... [--yes] [--purge]
+#                                  take components out: the plugin, and its
+#                                  keys in bindings.lua (commented out, backed
+#                                  up) so Omarchy's own key works again;
+#                                  --purge also deletes its settings and cache
 #   ./install.sh list
 #
 # --keys also binds each installed component's key in
@@ -116,13 +120,60 @@ case $cmd in
     ;;
   remove)
     shift
-    (( $# )) || die "remove which? (globe, theme, background, overview or all)"
-    [[ $1 == all ]] && set -- "${ORDER[@]}"
-    for c in "$@"; do
-      k=$(component "$c")
+    yes=0; purge=0; comps=()
+    for a in "$@"; do
+      case $a in
+        --yes|-y) yes=1 ;;
+        --purge) purge=1 ;;
+        all) comps+=("${ORDER[@]}") ;;
+        *) comps+=("$(component "$a")") ;;
+      esac
+    done
+    (( ${#comps[@]} )) || die "remove which? (globe, theme, background, overview or all)"
+    echo "Removing:"
+    for k in "${comps[@]}"; do
+      echo "  - ${LABEL[$k]}: the plugin (${PLUGINS}/${DIR[$k]})"
+      grep -q "${DIR[$k]}" "$BINDINGS" 2>/dev/null && echo "    and its keys in bindings.lua (commented out; Omarchy's own key back)"
+      (( purge )) && echo "    and its settings and cache (~/.config/${DIR[$k]}, ~/.cache/${DIR[$k]})"
+    done
+    [[ -f $BINDINGS ]] && echo "  (bindings.lua is backed up first)"
+    (( purge )) || echo "  Settings and caches are kept (--purge deletes them)."
+    if (( ! yes )); then
+      if [[ -t 0 ]]; then read -r -p "Go ahead? [y/N] " ok; [[ $ok == [yY]* ]] || { echo "nothing changed"; exit 1; }
+      else echo "run again with --yes to do it"; exit 2; fi
+    fi
+    ids=()
+    for k in "${comps[@]}"; do ids+=("${DIR[$k]}"); done
+    if [[ -f $BINDINGS ]] && grep -q -E "$(IFS='|'; echo "${ids[*]}")" "$BINDINGS"; then
+      cp -p "$BINDINGS" "$BINDINGS.before-glitch-remove-$(date +%Y%m%d-%H%M%S)"
+      # comment out the components' binds, and the hl.unbind of each key they
+      # took over (so Omarchy's own bind for it works again)
+      python3 - "$BINDINGS" "${ids[@]}" <<'PY'
+import re, sys
+path, ids = sys.argv[1], sys.argv[2:]
+lines = open(path).read().split("\n")
+key = lambda l: (re.search(r'(?:o\.bind|hl\.unbind|o\.rebind)\(\s*"([^"]+)"', l) or [None, None])[1]
+taken = set()
+for i, l in enumerate(lines):
+    if not l.lstrip().startswith("--") and any(x in l for x in ids):
+        if key(l):
+            taken.add(key(l))
+        lines[i] = "-- (Glitch removed) " + l
+# a key is only given back when nothing still binds it
+still = {key(l) for l in lines if not l.lstrip().startswith("--") and l.lstrip().startswith(("o.bind", "o.rebind"))}
+for i, l in enumerate(lines):
+    if not l.lstrip().startswith("--") and l.lstrip().startswith("hl.unbind") and key(l) in taken - still:
+        lines[i] = "-- (Glitch removed) " + l
+open(path, "w").write("\n".join(lines))
+PY
+      hyprctl reload >/dev/null 2>&1 || true
+      echo "keys: commented out in $BINDINGS"
+    fi
+    for k in "${comps[@]}"; do
       omarchy plugin disable "${DIR[$k]}" >/dev/null 2>&1 || true
       rm -rf -- "${PLUGINS:?}/${DIR[$k]}"
-      echo "removed ${DIR[$k]} (its key, if bound, is still in $BINDINGS)"
+      (( purge )) && rm -rf -- "${HOME:?}/.config/${DIR[$k]}" "${HOME:?}/.cache/${DIR[$k]}"
+      echo "removed ${DIR[$k]}"
     done
     omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
     ;;
