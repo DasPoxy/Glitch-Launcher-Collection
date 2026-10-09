@@ -556,6 +556,7 @@ FocusScope {
             y: 34
             spacing: 6
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "// GLITCH-BACKGROUND-SELECTOR  ·  " + view.shown.length + " WALLPAPERS"
                       + (view.themeName ? "  ·  THEME: " + view.themeName.toUpperCase().replace(/-/g, " ") + " (" + view.themeCount + ")" : "")
@@ -564,6 +565,7 @@ FocusScope {
                 font.family: view.mono; font.pixelSize: 13; font.letterSpacing: 2
             }
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: (view.filtering ? "/" + view.query : "> [/] filter   [T] theme   [W] your folder   [R] random") + (cursorBlink.on ? "_" : " ")
                 color: view.filtering ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
@@ -671,6 +673,7 @@ FocusScope {
                         }
                     }
                     Text {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         visible: !view.cur
                         text: view.items.length ? "> NO SIGNAL :: nothing matches \"" + view.query + "\"" : "> NO SIGNAL :: no wallpapers found"
@@ -692,21 +695,25 @@ FocusScope {
                 anchors.bottom: parent.bottom
                 spacing: 14
                 Text {
+                    textFormat: Text.PlainText
                     text: !view.cur ? "" : view.cur.section === "theme"
                           ? "THEME " + String(view.sel + 1).padStart(2, "0") + "/" + String(view.themeCount).padStart(2, "0")
                           : "FOLDER " + String(view.sel - view.themeCount + 1).padStart(3, "0") + "/" + String(view.shown.length - view.themeCount).padStart(3, "0")
                     color: view.cPrimary; font.family: view.mono; font.pixelSize: 14; font.bold: true
                 }
                 Text {
+                    textFormat: Text.PlainText
                     text: view.cur ? view.cur.name.toUpperCase() : ""
                     color: view.cText; font.family: view.mono; font.pixelSize: 14; font.bold: true; font.letterSpacing: 2
                 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: !!view.cur && view.cur.path === view.currentPath
                     text: "● ON SCREEN"
                     color: view.cPrimary; font.family: view.mono; font.pixelSize: 13
                 }
                 Text {
+                    textFormat: Text.PlainText
                     text: "look: " + (view.settings.look || "clean")
                     color: view.cText; opacity: 0.5; font.family: view.mono; font.pixelSize: 12
                 }
@@ -736,16 +743,19 @@ FocusScope {
                 width: parent.width - 32
                 spacing: 8
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideMiddle
                     text: "// FRAME :: " + (view.cur ? view.cur.name : "-")
                     color: view.cText; font.family: view.mono; font.pixelSize: 17; font.bold: true
                 }
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideMiddle
                     text: view.cur ? view.cur.dir : ""
                     color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11
                 }
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideRight
                     text: !view.cur ? "" : [view.cur.section === "theme" ? "THEME · " + view.themeName.replace(/-/g, " ") : "YOUR FOLDER",
                                             view.palette.w ? view.palette.w + " x " + view.palette.h : "",
@@ -756,7 +766,7 @@ FocusScope {
                     color: view.cText; opacity: 0.75; font.family: view.mono; font.pixelSize: 11
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35) }
-                Text { text: "COLOURS"; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+                Text { textFormat: Text.PlainText; text: "COLOURS"; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
                 // the picture's colours, most common first
                 Row {
                     spacing: 4
@@ -779,6 +789,7 @@ FocusScope {
                     Repeater {
                         model: view.palette.colors || []
                         delegate: Text {
+                            textFormat: Text.PlainText
                             required property string modelData
                             required property int index
                             text: modelData
@@ -789,6 +800,7 @@ FocusScope {
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35) }
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; wrapMode: Text.WordWrap
                     text: "THEME WALLPAPERS  " + view.themeCount + "   ·   YOUR FOLDER  " + (view.shown.length - view.themeCount)
                           + "\n" + (view.settings.folder || "(no folder set - options)")
@@ -873,6 +885,7 @@ FocusScope {
                             visible: card.at.pill < 0.5
                             color: Qt.rgba(0, 0, 0, 0.65)
                             Text {
+                                textFormat: Text.PlainText
                                 anchors.verticalCenter: parent.verticalCenter
                                 x: 8; width: parent.width - 16; elide: Text.ElideRight
                                 text: (card.onScreen ? "● " : "") + (card.themed ? "[T] " : "") + card.modelData.name
@@ -940,13 +953,14 @@ FocusScope {
             color: gearHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.15) : "transparent"
             border.width: 1
             border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.6)
-            Text { id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
+            Text { textFormat: Text.PlainText; id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
             HoverHandler { id: gearHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: view.settingsOpen = !view.settingsOpen }
         }
 
         // ------------------------------------------------------------ hints
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
             text: "[← →] browse   [T] theme   [W] folder   [R] random   [ENTER] set   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
@@ -987,6 +1001,7 @@ FocusScope {
             Repeater {
                 model: termLines
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string line
                     required property int index
                     property int shown: 0
@@ -1013,6 +1028,7 @@ FocusScope {
                 id: glyphRow
                 model: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789:=+*<>Z".split("")
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string modelData
                     width: 16; height: 26
                     horizontalAlignment: Text.AlignHCenter
@@ -1084,18 +1100,18 @@ FocusScope {
             color: on ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.2) : (chipHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.08) : "transparent")
             border.width: 1
             border.color: on ? view.cPrimary : Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35)
-            Text { id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
+            Text { textFormat: Text.PlainText; id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
             HoverHandler { id: chipHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: chip.clicked() }
         }
-        component Heading: Text { color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+        component Heading: Text { textFormat: Text.PlainText; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
 
         ColumnLayout {
             id: optCol
             x: 16; y: 16
             width: parent.width - 32
             spacing: 10
-            Text { text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
+            Text { textFormat: Text.PlainText; text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
 
             Heading { text: "WALLPAPERS FOLDER  ·  after the theme's own" ; Layout.fillWidth: true; wrapMode: Text.WordWrap }
             Rectangle {
@@ -1115,6 +1131,7 @@ FocusScope {
                 }
             }
             Text {
+                textFormat: Text.PlainText
                 text: "[ENTER] use it   ·   empty: the theme's wallpapers only"
                 color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 10
             }
@@ -1145,6 +1162,7 @@ FocusScope {
                 Chip { label: "Live"; on: view.desktopLook === "live"; onClicked: view.setSetting("desktopLook", "live") }
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 text: view.desktopLook === "baked" ? "rendered into the picture when you set it: free, but still"
                     : view.desktopLook === "live" ? "drawn live over the wallpaper, animated (~30 fps for rain); pauses when a window is fullscreen"
@@ -1204,7 +1222,7 @@ FocusScope {
                 Chip { label: "Stay open"; on: view.settings.afterApply !== "close"; onClicked: view.setSetting("afterApply", "stay") }
                 Chip { label: "Glitch out to desktop"; on: view.settings.afterApply === "close"; onClicked: view.setSetting("afterApply", "close") }
             }
-            Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
+            Text { textFormat: Text.PlainText; text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
         }
     }
 }

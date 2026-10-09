@@ -32,6 +32,7 @@ Item {
         border.color: Qt.rgba(ws.accent.r, ws.accent.g, ws.accent.b, 0.25)
     }
     Text {
+        textFormat: Text.PlainText
         anchors.centerIn: parent
         visible: !!ws.workspace && ws.workspace.windows.length === 0
         text: "[ empty ]"
@@ -70,6 +71,7 @@ Item {
                     height: Math.min(22, win.height * 0.2)
                     color: Qt.rgba(0, 0, 0, 0.7)
                     Text {
+                        textFormat: Text.PlainText
                         anchors.verticalCenter: parent.verticalCenter
                         x: 6; width: parent.width - 12
                         elide: Text.ElideRight

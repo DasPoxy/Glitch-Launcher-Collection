@@ -477,6 +477,7 @@ FocusScope {
             y: 34
             spacing: 6
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "// GLITCH-THEME-SELECTOR  ·  " + view.shown.length + " THEMES"
                       + (view.activeTheme ? "  ·  RUNNING: " + view.activeTheme.name.toUpperCase() : "")
@@ -485,6 +486,7 @@ FocusScope {
                 font.family: view.mono; font.pixelSize: 13; font.letterSpacing: 2
             }
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: (view.filtering ? "/" + view.query : "> [/] filter   [R] random") + (cursorBlink.on ? "_" : " ")
                 color: view.filtering ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
@@ -583,6 +585,7 @@ FocusScope {
                         }
                     }
                     Text {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         visible: !view.cur
                         text: view.themes.length ? "> NO SIGNAL :: nothing matches \"" + view.query + "\"" : "> NO SIGNAL"
@@ -604,19 +607,23 @@ FocusScope {
                 anchors.bottom: parent.bottom
                 spacing: 14
                 Text {
+                    textFormat: Text.PlainText
                     text: "CH " + String(view.sel + 1).padStart(2, "0") + "/" + String(view.shown.length).padStart(2, "0")
                     color: view.cPrimary; font.family: view.mono; font.pixelSize: 14; font.bold: true
                 }
                 Text {
+                    textFormat: Text.PlainText
                     text: view.cur ? view.cur.name.toUpperCase() : ""
                     color: view.cText; font.family: view.mono; font.pixelSize: 14; font.bold: true; font.letterSpacing: 2
                 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: !!view.cur && view.cur.current
                     text: "● RUNNING"
                     color: view.cPrimary; font.family: view.mono; font.pixelSize: 13
                 }
                 Text {
+                    textFormat: Text.PlainText
                     text: "look: " + (view.settings.look || "clean")
                     color: view.cText; opacity: 0.5; font.family: view.mono; font.pixelSize: 12
                 }
@@ -646,18 +653,20 @@ FocusScope {
                 width: parent.width - 32
                 spacing: 8
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideRight
                     text: "// THEME :: " + (view.cur ? view.cur.name : "-")
                     color: view.cText; font.family: view.mono; font.pixelSize: 17; font.bold: true
                 }
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideRight
                     text: !view.cur ? "" : [view.cur.slug, view.cur.mode, view.cur.user ? "installed" : "stock",
                                             view.cur.colors.length + " colours", view.cur.current ? "RUNNING" : ""].filter(s => s).join("  ·  ")
                     color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35) }
-                Text { text: "PALETTE"; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+                Text { textFormat: Text.PlainText; text: "PALETTE"; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
                 Grid {
                     columns: 2
                     columnSpacing: 14
@@ -678,14 +687,15 @@ FocusScope {
                             }
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
-                                Text { text: modelData[0]; color: view.cText; font.family: view.mono; font.pixelSize: 10; elide: Text.ElideRight; width: (readCol.width - 14) / 2 - 30 }
-                                Text { text: modelData[1]; color: view.cPrimary; opacity: 0.7; font.family: view.mono; font.pixelSize: 10 }
+                                Text { textFormat: Text.PlainText; text: modelData[0]; color: view.cText; font.family: view.mono; font.pixelSize: 10; elide: Text.ElideRight; width: (readCol.width - 14) / 2 - 30 }
+                                Text { textFormat: Text.PlainText; text: modelData[1]; color: view.cPrimary; opacity: 0.7; font.family: view.mono; font.pixelSize: 10 }
                             }
                         }
                     }
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35); visible: bgRow.count > 0 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: bgRow.count > 0
                     text: "BACKGROUNDS  ·  " + (view.cur ? view.cur.backgrounds.length : 0) + (view.cur && view.cur.backgrounds.length >= 6 ? "+" : "")
                     color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2
@@ -807,6 +817,7 @@ FocusScope {
                             visible: card.at.pill < 0.5
                             color: Qt.rgba(0, 0, 0, 0.65)
                             Text {
+                                textFormat: Text.PlainText
                                 anchors.verticalCenter: parent.verticalCenter
                                 x: 8; width: parent.width - 16; elide: Text.ElideRight
                                 text: (card.modelData.current ? "● " : "") + card.modelData.name
@@ -874,13 +885,14 @@ FocusScope {
             color: gearHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.15) : "transparent"
             border.width: 1
             border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.6)
-            Text { id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
+            Text { textFormat: Text.PlainText; id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
             HoverHandler { id: gearHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: view.settingsOpen = !view.settingsOpen }
         }
 
         // ------------------------------------------------------------ hints
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
             text: "[← →] browse   [ENTER] apply   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [R] random   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
@@ -921,6 +933,7 @@ FocusScope {
             Repeater {
                 model: termLines
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string line
                     required property int index
                     property int shown: 0
@@ -947,6 +960,7 @@ FocusScope {
                 id: glyphRow
                 model: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789:=+*<>Z".split("")
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string modelData
                     width: 16; height: 26
                     horizontalAlignment: Text.AlignHCenter
@@ -1018,18 +1032,18 @@ FocusScope {
             color: on ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.2) : (chipHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.08) : "transparent")
             border.width: 1
             border.color: on ? view.cPrimary : Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35)
-            Text { id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
+            Text { textFormat: Text.PlainText; id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
             HoverHandler { id: chipHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: chip.clicked() }
         }
-        component Heading: Text { color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+        component Heading: Text { textFormat: Text.PlainText; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
 
         ColumnLayout {
             id: optCol
             x: 16; y: 16
             width: parent.width - 32
             spacing: 10
-            Text { text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
+            Text { textFormat: Text.PlainText; text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
 
             Heading { text: "CAROUSEL" }
             Flow {
@@ -1083,7 +1097,7 @@ FocusScope {
                 Chip { label: "Stay open"; on: view.settings.afterApply !== "close"; onClicked: view.setSetting("afterApply", "stay") }
                 Chip { label: "Glitch out to desktop"; on: view.settings.afterApply === "close"; onClicked: view.setSetting("afterApply", "close") }
             }
-            Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
+            Text { textFormat: Text.PlainText; text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
         }
     }
 }

@@ -148,6 +148,7 @@ Item {
                         id: liveGlyphs
                         model: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789:=+*<>Z".split("")
                         delegate: Text {
+                            textFormat: Text.PlainText
                             required property string modelData
                             width: 16; height: 26
                             horizontalAlignment: Text.AlignHCenter

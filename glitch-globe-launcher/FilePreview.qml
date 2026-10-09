@@ -155,12 +155,14 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 2
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 elide: Text.ElideMiddle
                 text: "// PREVIEW :: " + (pv.file ? pv.file.name : "")
                 color: pv.fg; font.family: pv.mono; font.pixelSize: 15; font.bold: true; font.letterSpacing: 1
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 elide: Text.ElideRight
                 text: !pv.kind ? "> reading..." : [pv.kind.toUpperCase(), pv.mime, pv.human(pv.size), pv.modelInfo, pv.modified].filter(s => s).join("  ·  ")
@@ -229,6 +231,7 @@ Rectangle {
                 fragmentShader: Qt.resolvedUrl("shaders/preview.frag.qsb")
             }
             Text {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 visible: pv.kind !== "video" && still.status === Image.Loading
                 text: "> decoding..."
@@ -267,6 +270,7 @@ Rectangle {
         }
 
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             elide: Text.ElideRight
             text: (pv.visual ? "[TAB] look: " + pv.look + "   " : "") + "[ENTER] open   [SHIFT+ENTER] its folder"
@@ -297,6 +301,7 @@ Rectangle {
                 id: glyphRow
                 model: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789:=+*<>Z".split("")
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string modelData
                     width: 16; height: 26
                     horizontalAlignment: Text.AlignHCenter

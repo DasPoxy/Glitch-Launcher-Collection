@@ -33,6 +33,26 @@ case $mime in
   *) kind=other ;;
 esac
 
+# secrets stay off the screen (screen shares, streams, someone behind you):
+# files named like credentials, or text holding keys and tokens, aren't shown
+secret_name() {
+  case ${f,,} in
+    */client_secret*.json | *credentials* | */.netrc | */gh/hosts.yml | */hub \
+    | */rclone/rclone.conf | *.pem | *.key | *.p12 | *.pfx | */id_rsa* | */id_ed25519* | */id_ecdsa* | */id_dsa* \
+    | *.kdbx | */.env | */.env.* | */secrets.* | *token*.json | *token*.txt | */auth.json | *.gpg | */keyring*) return 0 ;;
+  esac
+  return 1
+}
+secret_text() {
+  head -c 16000 -- "$f" 2>/dev/null | grep -a -q -i -E \
+    'BEGIN [A-Z ]*PRIVATE KEY|client_secret|oauth_token|aws_secret_access_key|xox[bpas]-|gh[pousr]_[A-Za-z0-9]{20,}|"password" *:|^ *password *='
+}
+if [[ $kind != image && $kind != video && $kind != model ]] && { secret_name || { [[ $kind == text ]] && secret_text; }; }; then
+  printf '%s\t%s\t%s\t%s\t%s\n' "$f" "other" "$mime" "$size" "$modified"
+  echo "contents hidden: this looks like it holds secrets (keys, tokens, passwords). ENTER still opens it."
+  exit 0
+fi
+
 printf '%s\t%s\t%s\t%s\t%s\n' "$f" "$kind" "$mime" "$size" "$modified"
 
 case $kind in

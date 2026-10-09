@@ -55,6 +55,8 @@ def read_3mf(path):
     with zipfile.ZipFile(path) as z:
         names = [n for n in z.namelist() if n.lower().endswith(".model")]
         for name in names:
+            if z.getinfo(name).file_size > 600_000_000:     # a zip bomb, or far too big to preview
+                raise ValueError("model too large to preview")
             xml = z.read(name).decode("utf-8", "ignore")
             for obj in re.findall(r"<(?:\w+:)?mesh>(.*?)</(?:\w+:)?mesh>", xml, re.S):
                 verts = [tuple(float(a) for a in m) for m in re.findall(
@@ -205,7 +207,11 @@ def main():
     if not reader:
         print("error unsupported", flush=True)
         return
-    tris, total = reader(path)
+    try:
+        tris, total = reader(path)
+    except Exception as e:                    # broken or hostile files: say so, don't hang the preview
+        print(f"error can't read this model ({type(e).__name__})", flush=True)
+        return
     if not tris:
         print("error no triangles", flush=True)
         return

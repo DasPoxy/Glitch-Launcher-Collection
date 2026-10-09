@@ -513,6 +513,7 @@ FocusScope {
             y: 34
             spacing: 6
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "// GLITCH-OVERVIEW  ·  " + view.shown.length + " WORKSPACES  ·  ON " + view.focusedWs
                       + "  ·  CPU " + Math.round(view.stats.cpu) + "%  ·  " + view.human(view.stats.mem)
@@ -520,6 +521,7 @@ FocusScope {
                 font.family: view.mono; font.pixelSize: 13; font.letterSpacing: 2
             }
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: !view.cur ? "> scanning..." : "> workspace " + view.cur.id + (view.curWin ? "  ::  " + (view.curWin.class || view.curWin.title) : "")
                       + (cursorBlink.on ? "_" : " ")
@@ -594,14 +596,17 @@ FocusScope {
                 anchors.bottom: parent.bottom
                 spacing: 14
                 Text {
+                    textFormat: Text.PlainText
                     text: view.cur ? "WS " + String(view.cur.id).padStart(2, "0") : ""
                     color: view.cPrimary; font.family: view.mono; font.pixelSize: 14; font.bold: true
                 }
                 Text {
+                    textFormat: Text.PlainText
                     text: view.cur ? view.cur.windows.length + " WINDOW" + (view.cur.windows.length === 1 ? "" : "S") + "  ·  " + view.cur.monitor : ""
                     color: view.cText; font.family: view.mono; font.pixelSize: 14; font.bold: true; font.letterSpacing: 2
                 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: !!view.cur && view.cur.id === view.focusedWs
                     text: "● YOU ARE HERE"
                     color: view.cPrimary; font.family: view.mono; font.pixelSize: 13
@@ -630,11 +635,13 @@ FocusScope {
                 spacing: 8
                 readonly property var cost: view.wsCost(view.cur)
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideRight
                     text: "// WORKSPACE :: " + (view.cur ? view.cur.id + (view.cur.name !== String(view.cur.id) ? " (" + view.cur.name + ")" : "") : "-")
                     color: view.cText; font.family: view.mono; font.pixelSize: 17; font.bold: true
                 }
                 Text {
+                    textFormat: Text.PlainText
                     width: parent.width; elide: Text.ElideRight
                     text: !view.cur ? "" : "CPU " + readCol.cost.cpu.toFixed(1) + "%   ·   MEM " + view.human(readCol.cost.mem)
                           + "   ·   " + view.cur.windows.length + " windows"
@@ -642,6 +649,7 @@ FocusScope {
                 }
                 Rectangle { width: parent.width; height: 1; color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35) }
                 Text {
+                    textFormat: Text.PlainText
                     visible: !!view.cur && view.cur.windows.length === 0
                     text: "> nothing running here"
                     color: view.cText; opacity: 0.6; font.family: view.mono; font.pixelSize: 12
@@ -657,12 +665,14 @@ FocusScope {
                         width: readCol.width
                         spacing: 3
                         Text {
+                            textFormat: Text.PlainText
                             width: parent.width; elide: Text.ElideRight
                             text: (wrow.picked ? "▶ " : "  ") + (modelData.class || "?") + (modelData.floating ? "  [float]" : "") + (modelData.fullscreen ? "  [full]" : "")
                             color: wrow.picked ? view.cPrimary : view.cText
                             font.family: view.mono; font.pixelSize: 12; font.bold: wrow.picked
                         }
                         Text {
+                            textFormat: Text.PlainText
                             width: parent.width; elide: Text.ElideRight
                             text: "  " + (modelData.title || "")
                             color: view.cText; opacity: 0.55; font.family: view.mono; font.pixelSize: 10
@@ -682,6 +692,7 @@ FocusScope {
                                 }
                             }
                             Text {
+                                textFormat: Text.PlainText
                                 text: wrow.s.cpu.toFixed(1).padStart(5, " ") + "%  " + view.human(wrow.s.mem).padStart(8, " ") + "  " + wrow.s.procs + " proc"
                                 color: view.cText; opacity: 0.8; font.family: view.mono; font.pixelSize: 10
                             }
@@ -760,6 +771,7 @@ FocusScope {
                             width: wsLabel.implicitWidth + 12; height: 22; radius: 3
                             color: Qt.rgba(0, 0, 0, 0.7)
                             Text {
+                                textFormat: Text.PlainText
                                 id: wsLabel
                                 anchors.centerIn: parent
                                 text: (card.modelData.id === view.focusedWs ? "● " : "") + card.modelData.id
@@ -812,12 +824,13 @@ FocusScope {
             color: gearHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.15) : "transparent"
             border.width: 1
             border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.6)
-            Text { id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
+            Text { textFormat: Text.PlainText; id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
             HoverHandler { id: gearHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: view.settingsOpen = !view.settingsOpen }
         }
 
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
             text: "[TAB / ← → / A D] workspace   [↑ ↓ / W S] window   [1-9] jump   [ENTER] go"
@@ -860,6 +873,7 @@ FocusScope {
             Repeater {
                 model: termLines
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string line
                     required property int index
                     property int shown: 0
@@ -930,18 +944,18 @@ FocusScope {
             color: on ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.2) : (chipHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.08) : "transparent")
             border.width: 1
             border.color: on ? view.cPrimary : Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35)
-            Text { id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
+            Text { textFormat: Text.PlainText; id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
             HoverHandler { id: chipHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: chip.clicked() }
         }
-        component Heading: Text { color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+        component Heading: Text { textFormat: Text.PlainText; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
 
         ColumnLayout {
             id: optCol
             x: 16; y: 16
             width: parent.width - 32
             spacing: 10
-            Text { text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
+            Text { textFormat: Text.PlainText; text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
 
             Heading { text: "CAROUSEL" }
             Flow {
@@ -969,6 +983,7 @@ FocusScope {
                 Chip { label: "Toggle"; on: view.toggleMode; onClicked: view.setSetting("mode", "toggle") }
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 text: view.toggleMode ? "stays up: ALT+TAB again, ENTER or a click goes · ESC stays" : "letting go of ALT goes"
                 color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 10
@@ -992,7 +1007,7 @@ FocusScope {
                 Chip { label: "Off"; on: view.settings.glitch === "off"; onClicked: view.setSetting("glitch", "off") }
                 Chip { label: "Open/close glitch"; on: view.settings.openGlitch !== false; onClicked: view.setSetting("openGlitch", view.settings.openGlitch === false) }
             }
-            Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
+            Text { textFormat: Text.PlainText; text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
         }
     }
 }

@@ -944,6 +944,7 @@ FocusScope {
                     id: globeGlyphs
                     model: "01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ23456789:=+*<>Z".split("")
                     delegate: Text {
+                        textFormat: Text.PlainText
                         required property string modelData
                         width: 16; height: 26
                         horizontalAlignment: Text.AlignHCenter
@@ -1016,6 +1017,7 @@ FocusScope {
                     }
                     // the Omarchy menu's rows have a Nerd Font glyph instead
                     Text {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         visible: !!node.modelData.glyph
                         text: node.modelData.glyph || ""
@@ -1051,11 +1053,11 @@ FocusScope {
                         x: 12
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 10
-                        Text { text: ">"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 16; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                        Text { textFormat: Text.PlainText; text: ">"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 16; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: node.modelData.name || ""; color: view.cText; font.family: view.mono; font.pixelSize: 15; font.bold: true }
-                            Text { visible: text !== ""; text: node.modelData.sub || ""; color: view.cPrimary; opacity: 0.75; font.family: view.mono; font.pixelSize: 11 }
+                            Text { textFormat: Text.PlainText; text: node.modelData.name || ""; color: view.cText; font.family: view.mono; font.pixelSize: 15; font.bold: true }
+                            Text { textFormat: Text.PlainText; visible: text !== ""; text: node.modelData.sub || ""; color: view.cPrimary; opacity: 0.75; font.family: view.mono; font.pixelSize: 11 }
                         }
                     }
                 }
@@ -1090,6 +1092,7 @@ FocusScope {
             y: 46
             spacing: 6
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "// GLOBE-LAUNCHER  ·  " + view.nodes.length + (view.mode === "cmd" ? (view.term ? " OMARCHY ACTIONS + COMMANDS" : " OMARCHY MENU ACTIONS") : view.mode === "file" ? " FILES" : " APPS")
                       + (view.term ? "  ·  FILTER ACTIVE" : "")
@@ -1097,6 +1100,7 @@ FocusScope {
                 font.family: view.mono; font.pixelSize: 13; font.letterSpacing: 2
             }
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: (!view.query ? "> type to search   ·   > commands   ·   / files"
                        : view.mode === "app" ? "> " + view.query : view.query) + (cursorBlink.on ? "_" : " ")
@@ -1105,6 +1109,7 @@ FocusScope {
                 Timer { id: cursorBlink; property bool on: true; interval: 530; repeat: true; running: view.active; onTriggered: on = !on }
             }
             Text {
+                textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: view.netOn && view.netLast !== null
                 text: "▼ " + view.rate(view.netDown) + "   ▲ " + view.rate(view.netUp)
@@ -1141,6 +1146,7 @@ FocusScope {
                         source: card.app && !card.app.glyph ? Quickshell.iconPath(card.app.icon || "", "application-x-executable") : ""
                     }
                     Text {
+                        textFormat: Text.PlainText
                         anchors.centerIn: parent
                         visible: !!card.app && !!card.app.glyph
                         text: card.app ? (card.app.glyph || "") : ""
@@ -1153,14 +1159,16 @@ FocusScope {
                     Layout.fillWidth: true
                     spacing: 2
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true; elide: Text.ElideRight
                         text: !card.app ? "" : card.app.kind === "cmd" ? "omarchy " + card.app.base + " " + (card.app.typedArgs || card.app.sub)
                             : card.app.kind === "menu" ? ((card.app.sub ? card.app.sub + " › " : "") + card.app.name).toUpperCase()
                             : (card.app.name || "").toUpperCase()
                         color: view.cText; font.family: view.mono; font.pixelSize: 20; font.bold: true; font.letterSpacing: 1.5
                     }
-                    Text { Layout.fillWidth: true; elide: Text.ElideMiddle; visible: text !== ""; text: card.app ? (card.app.detail || "") : ""; color: view.cPrimary; opacity: 0.85; font.family: view.mono; font.pixelSize: 13 }
+                    Text { textFormat: Text.PlainText; Layout.fillWidth: true; elide: Text.ElideMiddle; visible: text !== ""; text: card.app ? (card.app.detail || "") : ""; color: view.cPrimary; opacity: 0.85; font.family: view.mono; font.pixelSize: 13 }
                     Text {
+                        textFormat: Text.PlainText
                         Layout.fillWidth: true; elide: Text.ElideRight
                         text: !card.app ? ""
                             : card.app.kind === "file" ? "[ENTER] open   [SHIFT+ENTER] open its folder   [← → ↑ ↓] hop   [ESC] back"
@@ -1174,6 +1182,7 @@ FocusScope {
             }
         }
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             visible: view.nodes.length === 0
             text: view.mode === "cmd" ? (!view.term ? "> reading the omarchy menu..." : view.commands.length === 0 ? "> reading omarchy commands..." : "> no command matches \"" + view.term + "\"")
@@ -1218,6 +1227,7 @@ FocusScope {
             Repeater {
                 model: termLines
                 delegate: Text {
+                    textFormat: Text.PlainText
                     required property string line
                     required property int index
                     property int shown: 0
@@ -1239,7 +1249,7 @@ FocusScope {
             color: gearHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.15) : "transparent"
             border.width: 1
             border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.5)
-            Text { id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
+            Text { textFormat: Text.PlainText; id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
             HoverHandler { id: gearHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: view.settingsOpen = !view.settingsOpen }
         }
@@ -1327,17 +1337,17 @@ FocusScope {
             color: on ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.2) : (chipHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.08) : "transparent")
             border.width: 1
             border.color: on ? view.cPrimary : Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35)
-            Text { id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
+            Text { textFormat: Text.PlainText; id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
             HoverHandler { id: chipHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: chip.clicked() }
         }
-        component Heading: Text { color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+        component Heading: Text { textFormat: Text.PlainText; color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
         component HexField: RowLayout {
             id: hf
             property string label: ""
             property string key: ""
             spacing: 8
-            Text { text: hf.label; color: view.cText; font.family: view.mono; font.pixelSize: 12; Layout.preferredWidth: 90 }
+            Text { textFormat: Text.PlainText; text: hf.label; color: view.cText; font.family: view.mono; font.pixelSize: 12; Layout.preferredWidth: 90 }
             Rectangle { width: 18; height: 18; radius: 3; color: view.settings.custom[hf.key] || "black"; border.width: 1; border.color: view.cText }
             Rectangle {
                 Layout.fillWidth: true; height: 26; radius: 3
@@ -1366,7 +1376,7 @@ FocusScope {
             x: 16; y: 16
             width: parent.width - 32
             spacing: 10
-            Text { text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
+            Text { textFormat: Text.PlainText; text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
 
             Heading { text: "COLOURS" }
             Flow {
@@ -1486,7 +1496,7 @@ FocusScope {
                     }
                 }
             }
-            Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
+            Text { textFormat: Text.PlainText; text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
         }
     }
 }
