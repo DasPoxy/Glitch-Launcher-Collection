@@ -457,7 +457,10 @@ FocusScope {
         else if (k === Qt.Key_Right) step(1)
         else if (k === Qt.Key_Up) { if (rowStep > 1 && winSel < 0) step(-rowStep); else stepWindow(-1) }
         else if (k === Qt.Key_Down) { if (rowStep > 1 && winSel < 0 && !shift) step(rowStep); else stepWindow(1) }
-        else if (k === Qt.Key_W && !ctrl) stepWindow(shift ? -1 : 1)
+        else if (k === Qt.Key_A && !ctrl) step(-1)
+        else if (k === Qt.Key_D && !ctrl) step(1)
+        else if (k === Qt.Key_W && !ctrl) stepWindow(-1)            // W / S like up / down
+        else if (k === Qt.Key_S && !ctrl) stepWindow(1)
         else if (k === Qt.Key_Home) sel = 0
         else if (k === Qt.Key_End) sel = Math.max(0, shown.length - 1)
         else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) go()
@@ -816,7 +819,7 @@ FocusScope {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
-            text: "[TAB / ← →] workspace   [↑ ↓] window   [1-9] jump   [ENTER] go"
+            text: "[TAB / ← → / A D] workspace   [↑ ↓ / W S] window   [1-9] jump   [ENTER] go"
                   + (view.toggleMode ? " (or ALT+TAB again)" : view.altHeld ? " (or let go of ALT)" : "")
                   + "   [CTRL+T] crt   [CTRL+,] options   [ESC] stay"
             color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 12

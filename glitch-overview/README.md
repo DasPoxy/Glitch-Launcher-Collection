@@ -18,8 +18,8 @@ sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher),
   1.5 s while open), as bars and numbers, with the workspace's totals.
 - **The carousel**: every workspace as a small picture of itself, in any of
   the collection's carousel styles (options).
-- **Fully keyboard driven**: Tab / Shift+Tab or ← → for workspaces, ↑ ↓ (or
-  W) to pick a window in one, 1-9 to jump, Enter or Space to go (to the
+- **Fully keyboard driven**: Tab / Shift+Tab, ← → or A / D for workspaces,
+  ↑ ↓ or W / S to pick a window in one, 1-9 to jump, Enter or Space to go (to the
   window, if one's picked), Esc to stay where you are, Ctrl+T for the CRT,
   Ctrl+, for the options.
 - **The feel**: glitching in over your desktop and out onto the workspace
