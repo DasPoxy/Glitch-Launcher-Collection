@@ -921,7 +921,7 @@ FocusScope {
         anchors.top: parent.top
         anchors.topMargin: 72
         anchors.rightMargin: 30
-        width: 360
+        width: 400
         height: optCol.implicitHeight + 32
         radius: 6
         color: Qt.rgba(view.cBg.r, view.cBg.g, view.cBg.b, 0.94)
@@ -982,6 +982,7 @@ FocusScope {
             Heading { text: "COLOURS" }
             Flow {
                 Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
                 spacing: 6
                 Chip { label: "Omarchy theme"; on: view.settings.theme === "omarchy"; onClicked: view.setSetting("theme", "omarchy") }
                 Repeater {
@@ -1008,6 +1009,7 @@ FocusScope {
             Heading { text: "GLOBE" }
             Flow {
                 Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
                 spacing: 6
                 Repeater {
                     model: [["dots", "Dots"], ["wire", "Wireframe"], ["binary", "Binary"], ["code", "Code Earth"], ["holo", "Holo Earth"],
@@ -1020,15 +1022,19 @@ FocusScope {
                     }
                 }
             }
-            Row {
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
                 spacing: 6
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
                 Chip { label: "Network traffic"; on: view.settings.net !== false; onClicked: view.setSetting("net", view.settings.net === false) }
             }
 
-            Heading { text: "FILE PREVIEW  ·  [TAB] while searching files" }
-            Row {
+            Heading { text: "FILE PREVIEW  ·  [TAB] cycles"; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
                 spacing: 6
                 Repeater {
                     model: ["clean", "grid", "glyph", "rain"]
@@ -1042,7 +1048,9 @@ FocusScope {
             }
 
             Heading { text: "GLITCHES" }
-            Row {
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
                 spacing: 6
                 Chip { label: "Normal"; on: view.settings.glitch === "normal"; onClicked: view.setSetting("glitch", "normal") }
                 Chip { label: "Subtle"; on: view.settings.glitch === "subtle"; onClicked: view.setSetting("glitch", "subtle") }
@@ -1051,6 +1059,7 @@ FocusScope {
             // which kinds: click one to switch it on (and see it) or off
             Flow {
                 Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
                 spacing: 6
                 visible: view.glitchesOn
                 Repeater {
