@@ -20,7 +20,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
-    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, preview: "grid",
+    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, nebula: true, preview: "grid",
                               glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed"],
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
@@ -264,7 +264,14 @@ FocusScope {
                 t * x * y + s * z, t * y * y + c, t * y * z - s * x,
                 t * x * z - s * y, t * y * z + s * x, t * z * z + c]
     }
-    function turn(x, y, z, a) { rot = mul(axisAngle(x, y, z, a), rot) }
+    function turn(x, y, z, a) {
+        rot = mul(axisAngle(x, y, z, a), rot)
+        // the nebula drifts the way the globe turns (parallax)
+        parX -= y * a * 0.08
+        parY += x * a * 0.08
+    }
+    property real parX: 0
+    property real parY: 0
     function apply(p) {
         return [rot[0] * p[0] + rot[1] * p[1] + rot[2] * p[2], rot[3] * p[0] + rot[4] * p[1] + rot[5] * p[2], rot[6] * p[0] + rot[7] * p[1] + rot[8] * p[2]]
     }
@@ -582,6 +589,44 @@ FocusScope {
             property color tint: view.cGlow
             property color starColor: view.cPrimary
             fragmentShader: Qt.resolvedUrl("shaders/stars.frag.qsb")
+        }
+
+        // the nebula: far gas (half resolution, it's soft), then near dust;
+        // each layer shifts its own amount as the globe turns and the mouse
+        // moves, so they slide past one another
+        readonly property vector2d nebulaShift: Qt.vector2d(
+            view.parX + (sceneHover.point.position.x / Math.max(1, width) - 0.5) * 0.06,
+            view.parY + (sceneHover.point.position.y / Math.max(1, height) - 0.5) * 0.04)
+        HoverHandler { id: sceneHover }
+        Item {
+            width: parent.width / 2
+            height: parent.height / 2
+            scale: 2
+            transformOrigin: Item.TopLeft
+            visible: view.settings.nebula !== false
+            ShaderEffect {
+                anchors.fill: parent
+                property real time: view.driftT
+                property vector2d resolution: Qt.vector2d(width, height)
+                property vector2d shift: scene.nebulaShift
+                property color tintA: view.cGlow
+                property color tintB: view.cPrimary
+                property color dark: view.cBg
+                property real mode: 0
+                fragmentShader: Qt.resolvedUrl("shaders/nebula.frag.qsb")
+            }
+        }
+        ShaderEffect {
+            anchors.fill: parent
+            visible: view.settings.nebula !== false
+            property real time: view.driftT
+            property vector2d resolution: Qt.vector2d(width, height)
+            property vector2d shift: scene.nebulaShift
+            property color tintA: view.cGlow
+            property color tintB: view.cPrimary
+            property color dark: view.cBg
+            property real mode: 1
+            fragmentShader: Qt.resolvedUrl("shaders/nebula.frag.qsb")
         }
 
         // shooting stars, comets and spacecraft, behind the globe
@@ -1095,6 +1140,7 @@ FocusScope {
                 spacing: 6
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
+                Chip { label: "Nebula"; on: view.settings.nebula !== false; onClicked: view.setSetting("nebula", view.settings.nebula === false) }
                 Chip { label: "Network particles"; on: view.settings.net !== false; onClicked: view.setSetting("net", view.settings.net === false) }
             }
 

@@ -20,7 +20,9 @@ of being jacked into a terminal.
   its name; a card at the bottom shows its logo and description.
 - **Keyboard**: arrow keys hop to the nearest app that way, typing filters,
   Enter launches, Esc clears the search or closes.
-- **Atmosphere**: a full-resolution starfield, and now and then a glitch, one of:
+- **Atmosphere**: a full-resolution starfield under a nebula (swirling gas
+  and near dust lanes and motes, sliding past one another in parallax as the
+  globe turns and the mouse moves; toggle it in the options), and now and then a glitch, one of:
   tear, blocks (datamosh), VHS, CRT collapse, code bleed or invert (pick
   which in the options) - and a terminal in the corner types a line. Linger on a selection for a
   few seconds and it scans it: an app's description, categories and command;
@@ -46,7 +48,7 @@ of being jacked into a terminal.
   lines, archives' contents, audio tags.
 - **Options** (Ctrl+, or the button top right): colours from your Omarchy
   theme, a prebuilt theme (Matrix, Cyber, Ice, Amber, Mono) or your own,
-  the globe's style, auto-spin, network and space traffic, the preview's look, and glitches normal / subtle / off and which kinds. Saved in
+  the globe's style, auto-spin, nebula, network and space traffic, the preview's look, and glitches normal / subtle / off and which kinds. Saved in
   `~/.config/globe-launcher/settings.json`.
 
 Clicking the selected app (or Enter) launches it and closes the launcher;
