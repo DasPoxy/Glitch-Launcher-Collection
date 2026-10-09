@@ -45,7 +45,9 @@ of being jacked into a terminal.
   videos (muted, looping) and PDFs' first pages through a look you cycle with
   Tab - clean, grid (duotone with glowing traced blocks), glyph (a mosaic of
   characters) or rain (code falling through it) - and text files' first
-  lines, archives' contents, audio tags.
+  lines, archives' contents, audio tags. 3D models (STL, 3MF, OBJ) spin on a
+  turntable rendered by `render-model.py` (Python + Pillow, cached in
+  `~/.cache/globe-launcher/models`), through the same looks.
 - **Options** (Ctrl+, or the button top right): colours from your Omarchy
   theme, a prebuilt theme (Matrix, Cyber, Ice, Amber, Mono) or your own,
   the globe's style, auto-spin, nebula, network and space traffic, the preview's look, and glitches normal / subtle / off and which kinds. Saved in

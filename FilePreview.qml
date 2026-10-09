@@ -29,8 +29,34 @@ Rectangle {
     property string modified: ""
     property string body: ""
     readonly property bool visual: kind === "image" || kind === "video" || (kind === "pdf" && body.trim() !== "")
+                                   || (kind === "model" && frames.length > 0)
     readonly property string visualSource: !visual ? ""
-        : "file://" + encodeURI(kind === "pdf" ? body.trim() : path).replace(/#/g, "%23").replace(/\?/g, "%3F")
+        : fileUrl(kind === "pdf" ? body.trim() : kind === "model" ? frames[frame % frames.length] : path)
+    function fileUrl(p) { return "file://" + encodeURI(p).replace(/#/g, "%23").replace(/\?/g, "%3F") }
+
+    // a 3D model: render-model.py turns it on a turntable, frame by frame
+    // (cached); it spins through them once they're all in
+    readonly property string renderer: Qt.resolvedUrl("render-model.py").toString().replace(/^file:\/\//, "")
+    readonly property string modelCache: Quickshell.env("HOME") + "/.cache/globe-launcher/models"
+    readonly property int modelFrames: 24
+    property var frames: []
+    property int frame: 0
+    property string modelInfo: ""
+    Process {
+        id: modelProc
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("tris ")) pv.modelInfo = Number(line.slice(5)).toLocaleString(Qt.locale(), "f", 0) + " triangles"
+                else if (line.startsWith("error ")) pv.modelInfo = line.slice(6)
+                else if (line) { pv.frames = pv.frames.concat([line]); pv.frame = pv.frames.length - 1 }
+            }
+        }
+    }
+    Timer {
+        interval: 70; repeat: true
+        running: pv.kind === "model" && pv.frames.length === pv.modelFrames && pv.active
+        onTriggered: pv.frame = (pv.frame + 1) % pv.frames.length
+    }
     readonly property real lookIndex: ["clean", "grid", "glyph", "rain"].indexOf(look)
     property real reveal: 1
 
@@ -55,6 +81,8 @@ Rectangle {
     Timer { id: settle; interval: 140; onTriggered: pv.load() }
     function load() {
         probe.running = false
+        modelProc.running = false
+        frames = []; frame = 0; modelInfo = ""
         if (!file || !active) { kind = ""; path = ""; return }
         probe.command = ["bash", helper, file.path, thumbs]
         probe.running = true
@@ -73,6 +101,10 @@ Rectangle {
                 pv.size = Number(head[3] || 0)
                 pv.modified = head[4] || ""
                 pv.body = nl < 0 ? "" : text.slice(nl + 1)
+                if (pv.kind === "model") {
+                    modelProc.command = ["python3", pv.renderer, pv.path, pv.modelCache]
+                    modelProc.running = true
+                }
                 pv.reveal = 0
                 revealAnim.restart()
             }
@@ -109,6 +141,7 @@ Rectangle {
                 + (tags.duration ? "\nLENGTH  " + seconds(tags.duration) : "")
         }
         if (kind === "pdf") return "> no preview of this PDF"
+        if (kind === "model") return modelInfo && !modelInfo.includes("triangles") ? "> " + modelInfo : "> rendering the model..."
         return body.trim() ? "> " + body.trim() : ""
     }
 
@@ -130,7 +163,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 elide: Text.ElideRight
-                text: !pv.kind ? "> reading..." : [pv.kind.toUpperCase(), pv.mime, pv.human(pv.size), pv.modified].filter(s => s).join("  ·  ")
+                text: !pv.kind ? "> reading..." : [pv.kind.toUpperCase(), pv.mime, pv.human(pv.size), pv.modelInfo, pv.modified].filter(s => s).join("  ·  ")
                 color: pv.primary; opacity: 0.75; font.family: pv.mono; font.pixelSize: 11
             }
             Rectangle { Layout.fillWidth: true; Layout.topMargin: 6; height: 1; color: Qt.rgba(pv.primary.r, pv.primary.g, pv.primary.b, 0.35) }
@@ -152,9 +185,12 @@ Rectangle {
                     visible: pv.kind !== "video"
                     source: pv.kind !== "video" ? pv.visualSource : ""
                     fillMode: Image.PreserveAspectFit
-                    asynchronous: true
+                    asynchronous: pv.kind !== "model"        // frames swap in without a blank between
+                    cache: pv.kind === "model"
                     sourceSize: Qt.size(1400, 1400)
-                    onStatusChanged: if (status === Image.Ready) { pv.reveal = 0; revealAnim.restart() }
+                    // materialise on a new picture, not on every turntable frame
+                    property string shownFor: ""
+                    onStatusChanged: if (status === Image.Ready && shownFor !== pv.path) { shownFor = pv.path; pv.reveal = 0; revealAnim.restart() }
                 }
                 VideoOutput {
                     id: videoOut

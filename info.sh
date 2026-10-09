@@ -40,5 +40,14 @@ case $mime in
     echo "entries $(bsdtar -tf "$f" 2>/dev/null | wc -l)"
     ;;
 esac
+case ${f,,} in
+  *.stl)
+    # binary STL: the triangle count is in the header
+    n=$(python3 -c 'import struct,sys,os; f=open(sys.argv[1],"rb"); f.seek(80); n=struct.unpack("<I",f.read(4))[0]; print(n if 84+n*50==os.path.getsize(sys.argv[1]) else "")' "$f" 2>/dev/null)
+    [[ -n $n ]] && echo "tris    $n"
+    echo "model   STL" ;;
+  *.3mf) echo "model   3MF" ;;
+  *.obj) echo "model   OBJ" ;;
+esac
 [[ -x $f && ! -d $f ]] && echo "mode    executable"
 exit 0

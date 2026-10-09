@@ -217,6 +217,7 @@ FocusScope {
         if (["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "avif"].includes(e)) return "image-x-generic"
         if (["mp4", "mkv", "webm", "mov", "avi", "m4v"].includes(e)) return "video-x-generic"
         if (["mp3", "flac", "ogg", "wav", "m4a", "opus"].includes(e)) return "audio-x-generic"
+        if (["stl", "3mf", "obj", "step", "stp"].includes(e)) return "model"
         if (e === "pdf") return "application-pdf"
         if (["zip", "tar", "gz", "xz", "7z", "rar", "zst", "bz2"].includes(e)) return "package-x-generic"
         if (["sh", "py", "js", "ts", "qml", "lua", "c", "cpp", "h", "rs", "go", "rb"].includes(e)) return "text-x-script"

@@ -4,6 +4,7 @@
 # then a body by kind:
 #   text     its first lines           archive  what's in it
 #   pdf      a thumbnail of page 1     audio    its tags and length
+#   model    nothing: FilePreview runs render-model.py for a turntable
 #   other    file(1)'s description    (image / video: nothing, shown directly)
 # usage: preview.sh FILE THUMB_DIR
 
@@ -14,7 +15,13 @@ mime=$(file -b --mime-type -- "$f" 2>/dev/null)
 size=$(stat -c %s -- "$f" 2>/dev/null || echo 0)
 modified=$(stat -c %y -- "$f" 2>/dev/null | cut -d. -f1)
 
+ext=${f##*.}
+case ${ext,,} in
+  stl | 3mf | obj) mime="model/${ext,,}" ;;
+esac
+
 case $mime in
+  model/*) kind=model ;;
   image/*) kind=image ;;
   video/*) kind=video ;;
   audio/*) kind=audio ;;
@@ -45,7 +52,7 @@ case $kind in
     ffprobe -v quiet -show_entries format=duration:format_tags=title,artist,album,date,genre \
       -of default=noprint_wrappers=1 -- "$f" 2>/dev/null | sed 's/^TAG://'
     ;;
-  image | video) ;;
+  image | video | model) ;;
   *)
     file -b -- "$f" 2>/dev/null
     ;;
