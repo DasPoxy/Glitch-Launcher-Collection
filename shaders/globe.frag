@@ -10,8 +10,8 @@
 //   5 unicron the planet-eater: armour, vents, a mouth firing a beam, a ring
 //   6 dyson   a lattice shell round a star, light escaping through the gaps
 //   7 rain    matrix code falling down the sphere in columns, heads bright
-//   8 hex     bestagons: glass hex tiles with glowing edges, the far side's
-//             lattice through them, solid tiles popped out, loose ones drifting
+//   8 hex     bestagons on a Goldberg sphere (whole cells only): glass with
+//             glowing edges, the far lattice through it, solid tiles, loose ones
 // The far side shows faintly through, the rim glows, and a halo sits round
 // the outside.
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -409,11 +409,109 @@ vec4 dyson(vec2 d, float r2) {
 }
 
 // ---------------------------------------------------------------- bestagons
-// hex tiles over the sphere: each cube face of the sphere carries a hex grid
-// (equal-angle, so they stay even), every tile bevelled with a neon seam
-// round it, coloured in an iridescent sweep of the theme; some pop out, and
-// a few loose ones drift by off the edge
-vec4 hexCell(vec2 p) {                       // (offset in the cell, cell id)
+// A Goldberg sphere: an icosahedron, each face divided F times, its lattice
+// points pushed out to the sphere; every point owns the cell of the sphere
+// nearest it. That gives whole hexagons everywhere (and the twelve
+// pentagons any sphere of hexagons needs, one at each icosahedron corner) -
+// no seams, no cut tiles.
+const float PHI = 1.6180340;
+// (functions, not const arrays: the GL drivers' older GLSL won't take those)
+vec3 icoV(int i) {
+    float j = float(i - 4 * (i / 4));
+    float s1 = mod(j, 2.0) > 0.5 ? 1.0 : -1.0;
+    float s2 = j > 1.5 ? -1.0 : 1.0;
+    if (i < 4) return vec3(s1, s2 * PHI, 0.0);           // 0..3: (+-1, +-phi, 0)
+    if (i < 8) return vec3(0.0, s1, s2 * PHI);           // 4..7: (0, +-1, +-phi)
+    return vec3(s2 * PHI, 0.0, s1);                      // 8..11: (+-phi, 0, +-1)
+}
+ivec3 icoFace(int f) {
+    if (f < 5) {
+        if (f == 0) return ivec3(0, 11, 5); if (f == 1) return ivec3(0, 5, 1);
+        if (f == 2) return ivec3(0, 1, 7);  if (f == 3) return ivec3(0, 7, 10);
+        return ivec3(0, 10, 11);
+    }
+    if (f < 10) {
+        if (f == 5) return ivec3(1, 5, 9);  if (f == 6) return ivec3(5, 11, 4);
+        if (f == 7) return ivec3(11, 10, 2); if (f == 8) return ivec3(10, 7, 6);
+        return ivec3(7, 1, 8);
+    }
+    if (f < 15) {
+        if (f == 10) return ivec3(3, 9, 4); if (f == 11) return ivec3(3, 4, 2);
+        if (f == 12) return ivec3(3, 2, 6); if (f == 13) return ivec3(3, 6, 8);
+        return ivec3(3, 8, 9);
+    }
+    if (f == 15) return ivec3(4, 9, 5); if (f == 16) return ivec3(2, 4, 11);
+    if (f == 17) return ivec3(6, 2, 10); if (f == 18) return ivec3(8, 6, 7);
+    return ivec3(9, 8, 1);
+}
+
+vec3 latticePoint(int f, float i, float j, float F) {
+    ivec3 t = icoFace(f);
+    vec3 a = normalize(icoV(t.x)), b = normalize(icoV(t.y)), c = normalize(icoV(t.z));
+    return normalize(a + (b - a) * (i / F) + (c - a) * (j / F));
+}
+
+// the cell at m (model space, unit): its point, how far m is inside it (0 at
+// its edge, about 0.5 at its centre), and how near a corner it is
+void geoCell(vec3 m, float F, out vec3 best, out float e1, out float e2) {
+    // the three faces m is nearest: a cell near a face's edge takes points
+    // from the face next door too
+    int f0 = 0, f1 = 0, f2 = 0;
+    float d0 = -2.0, d1 = -2.0, d2 = -2.0;
+    for (int f = 0; f < 20; f++) {
+        ivec3 t = icoFace(f);
+        float dd = dot(m, normalize(icoV(t.x) + icoV(t.y) + icoV(t.z)));
+        if (dd > d0) { d2 = d1; f2 = f1; d1 = d0; f1 = f0; d0 = dd; f0 = f; }
+        else if (dd > d1) { d2 = d1; f2 = f1; d1 = dd; f1 = f; }
+        else if (dd > d2) { d2 = dd; f2 = f; }
+    }
+    // where m falls in each face's lattice; its 4x4 neighbourhood are the
+    // candidates (enough to hold the nearest point and all its neighbours)
+    vec3 cand[48];
+    int count = 0;
+    for (int s = 0; s < 3; s++) {
+        int f = s == 0 ? f0 : s == 1 ? f1 : f2;
+        ivec3 t = icoFace(f);
+        vec3 a = normalize(icoV(t.x)), b = normalize(icoV(t.y)), c = normalize(icoV(t.z));
+        vec3 N = normalize(cross(b - a, c - a));
+        vec3 q = m * (dot(N, a) / dot(N, m));                 // onto the face's plane
+        vec3 v0 = b - a, v1 = c - a, v2 = q - a;
+        float d00 = dot(v0, v0), d01 = dot(v0, v1), d11 = dot(v1, v1);
+        float d20 = dot(v2, v0), d21 = dot(v2, v1);
+        float den = d00 * d11 - d01 * d01;
+        float u = (d11 * d20 - d01 * d21) / den * F;
+        float v = (d00 * d21 - d01 * d20) / den * F;
+        float i0 = floor(u), j0 = floor(v);
+        for (int di = -1; di <= 2; di++)
+            for (int dj = -1; dj <= 2; dj++) {
+                float i = i0 + float(di), j = j0 + float(dj);
+                if (i < 0.0 || j < 0.0 || i + j > F) { cand[count++] = vec3(0.0); continue; }
+                cand[count++] = latticePoint(f, i, j, F);
+            }
+    }
+    // nearest point, then the nearest boundaries to its neighbours
+    float bd = 1e9;
+    best = vec3(0.0, 1.0, 0.0);
+    for (int k = 0; k < 48; k++) {
+        if (dot(cand[k], cand[k]) < 0.5) continue;
+        float dd = dot(m - cand[k], m - cand[k]);
+        if (dd < bd) { bd = dd; best = cand[k]; }
+    }
+    float spacing = 1.05146 / F;                               // a cell's width, about
+    e1 = 1e9; e2 = 1e9;
+    for (int k = 0; k < 48; k++) {
+        if (dot(cand[k], cand[k]) < 0.5) continue;
+        vec3 p = cand[k];
+        float ab = length(best - p);
+        if (ab < spacing * 0.25) continue;                     // itself
+        float b = (dot(m - p, m - p) - bd) / (2.0 * ab);       // to the bisector between them
+        if (b < e1) { e2 = e1; e1 = b; } else if (b < e2 && b > e1 + 1e-4) { e2 = b; }
+    }
+    e1 /= spacing;
+    e2 /= spacing;
+}
+
+vec4 hexCell(vec2 p) {                       // a flat hex grid, for the loose tiles
     const vec2 s = vec2(1.0, 1.7320508);
     vec4 hc = floor(vec4(p, p - vec2(0.5, 1.0)) / s.xyxy) + 0.5;
     vec4 h = vec4(p - hc.xy * s, p - (hc.zw + 0.5) * s);
@@ -427,94 +525,84 @@ vec3 iridescent(vec3 n, float h) {
     float t = 0.5 + 0.5 * sin(dot(n, vec3(2.1, 1.4, -1.2)) * 1.6 + h * 1.4 + time * 0.25);
     return mix(mix(glowColor.rgb, dotColor.rgb, t), vec3(0.85, 0.9, 1.0), 0.12 * (1.0 - t));
 }
-vec3 hexTile(vec4 hx, vec3 n, float face, out float seamOut) {
-    float e = hexEdge(hx.xy);
-    vec2 id = hx.zw + face * 37.0;
-    float h = hash(id);
-    float pop = step(0.9, h);
+// a solid tile's look: e from its edge (0) in, dir from its centre (screen)
+vec3 tileShade(float e, vec2 dir, float h, vec3 n, out float seamOut) {
     float gap = 0.045;
     seamOut = smoothstep(gap, gap * 0.4, e);
     float bevel = 1.0 - smoothstep(gap, gap + 0.09, e);
     vec3 L = normalize(vec3(-0.5, 0.6, 0.62));
     float diff = 0.3 + 0.7 * max(dot(n, L), 0.0);
-    vec2 dir = normalize(hx.xy + 1e-4);
-    float slope = dot(dir, vec2(-0.55, 0.75));             // bevels facing the light are bright
-    vec3 col = iridescent(n, h) * diff * (0.55 + 0.45 * hash(id + 2.0));
+    float slope = dot(dir, vec2(-0.55, 0.75));               // bevels facing the light are bright
+    vec3 col = iridescent(n, h) * diff * (0.55 + 0.45 * fract(h * 7.31));
     col *= 1.0 + bevel * slope * 0.7;
-    col += pop * (iridescent(n, h + 1.0) * 0.35 + 0.08);
+    col += iridescent(n, h + 1.0) * 0.3 + 0.06;
     float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 24.0);
     col += spec * 0.35 * (1.0 - seamOut);
-    col = mix(col, dotColor.rgb * 0.55, seamOut);       // the neon seam
-    return col;
+    return mix(col, dotColor.rgb * 0.55, seamOut);         // the neon seam
 }
-// the hex tiling at a point on the sphere (view space): the cell, its face
-vec4 hexAt(vec3 n, out float face, float k) {
-    vec3 m = transpose(mat3(rotation)) * n;
-    vec3 am = abs(m);
-    vec2 uv;
-    if (am.x >= am.y && am.x >= am.z) { uv = m.yz / am.x; face = m.x > 0.0 ? 1.0 : 2.0; }
-    else if (am.y >= am.z)            { uv = m.xz / am.y; face = m.y > 0.0 ? 3.0 : 4.0; }
-    else                              { uv = m.xy / am.z; face = m.z > 0.0 ? 5.0 : 6.0; }
-    uv = atan(uv) * (4.0 / PI);          // equal-angle: even tiles out to the face edges
-    return hexCell(uv * k);
-}
-// glass bestagons: mostly see-through - faint tinted glass with glowing hex
+
+// glass bestagons: mostly see-through - faint tinted glass with glowing
 // edges and data points at the corners, the far side's lattice showing
-// through - with a scatter of solid tiles popped out, and loose ones drifting
+// through - with a scatter of solid tiles, and loose ones drifting by
 vec4 hexGlobe(vec2 d, float r2) {
     float rr = sqrt(r2);
     vec3 col = vec3(0.0);
     float a = 0.0;
-    float k = rings * 0.13;                  // hexes across a face, about
+    float F = max(3.0, floor(rings * 0.15));
+    mat3 toModel = transpose(mat3(rotation));
     if (r2 < 1.0) {
         float z = sqrt(1.0 - r2);
         // the far side: just its lattice, dim
-        float fb;
-        vec4 hb = hexAt(vec3(d, -z), fb, k);
-        float eb = hexEdge(hb.xy);
+        vec3 pb; float eb, eb2;
+        geoCell(toModel * vec3(d, -z), F, pb, eb, eb2);
         float backLine = smoothstep(0.05, 0.0, eb);
         col += mix(glowColor.rgb, dotColor.rgb, 0.4) * backLine * 0.28;
         a = backLine * 0.3;
         // the near side
         vec3 n = vec3(d, z);
-        float face;
-        vec4 hx = hexAt(n, face, k);
-        float e = hexEdge(hx.xy);
-        vec2 id = hx.zw + face * 37.0;
-        float h = hash(id);
-        float solid = step(0.82, h);                         // the popped, solid tiles
+        vec3 m = toModel * n;
+        vec3 p; float e, e2;
+        geoCell(m, F, p, e, e2);
+        float h = hash(floor(p.xy * 400.0) + floor(p.z * 400.0) * 0.37);
+        float solid = step(0.84, h);
         float edgeLine = smoothstep(0.04, 0.0, e);
         float edgeGlow = exp(-e * 22.0);
         vec3 tint = iridescent(n, h);
-        // glass: a faint tinted fill, brighter toward its rim (a bevel of light)
-        float glass = 0.08 + 0.12 * smoothstep(0.2, 0.05, e) + 0.05 * hash(id + 2.0);
-        // data points at the corners and centres, twinkling
-        float corner = smoothstep(0.03, 0.0, abs(length(hx.xy) - 0.577)) * smoothstep(0.06, 0.0, e);
-        float centre = smoothstep(0.05, 0.0, length(hx.xy)) * step(0.55, hash(id + floor(time * 1.5)));
+        float glass = 0.08 + 0.12 * smoothstep(0.2, 0.05, e) + 0.05 * fract(h * 13.7);
+        // data points at the corners (where three cells meet) and centres
+        float corner = smoothstep(0.05, 0.0, e2) * smoothstep(0.05, 0.0, e);
+        vec3 pv = mat3(rotation) * p;                          // its centre, in view
+        vec2 off = n.xy - pv.xy;
+        float centre = smoothstep(0.012, 0.0, length(off)) * step(0.55, fract(h * 31.0 + floor(time * 1.5) * 0.37));
         float seam;
-        vec3 tile = hexTile(hx, n, face, seam);
-        float fill = mix(glass, 0.95, solid);
-        col = mix(col, tint * 0.9, fill * (1.0 - solid));
+        vec3 tile = tileShade(e, normalize(off + 1e-5), h, n, seam);
+        col = mix(col, tint * 0.9, glass * (1.0 - solid));
         col = mix(col, tile, solid * (1.0 - seam));
         col += dotColor.rgb * (edgeLine * 0.75 + edgeGlow * 0.25) * (0.6 + 0.4 * z);
         col += mix(dotColor.rgb, vec3(1.0), 0.5) * (corner * 0.5 + centre * 0.7);
-        a = max(a, max(fill, max(edgeLine * 0.9, edgeGlow * 0.4)));
+        a = max(a, max(mix(glass, 0.95, solid), max(edgeLine * 0.9, edgeGlow * 0.4)));
         a = max(a, max(corner, centre));
         col += glowColor.rgb * pow(1.0 - z, 2.4) * 0.5;
         a = max(a, pow(1.0 - z, 2.4) * 0.5);
     }
-    // loose tiles drifting past the edge
-    if (rr > 0.98 && rr < 1.45) {
-        vec2 p = d * k * 1.6 + vec2(time * 0.05, 0.0);
+    // loose tiles drifting past the edge: whole ones only - each is kept or
+    // not, and faded, by where its centre is
+    float k = F * 0.9;
+    if (rr > 0.95 && rr < 1.6) {
+        vec2 drift = vec2(time * 0.05, 0.0);
+        vec2 p = d * k * 1.6 + drift;
         vec4 hx = hexCell(p);
+        vec2 cd = (p - hx.xy - drift) / (k * 1.6);             // the tile's centre, in globe radii
+        float rc = length(cd);
         float h = hash(hx.zw + 91.0);
-        float keep = step(h, 0.5 * (1.0 - smoothstep(1.0, 1.45, rr))) * step(0.5, hash(hx.zw + floor(time * 0.15 + h * 5.0)));
+        float keep = step(1.09, rc) * step(rc, 1.45) * step(h, 0.55 * (1.0 - smoothstep(1.1, 1.45, rc)))
+                   * step(0.5, hash(hx.zw + floor(time * 0.15 + h * 5.0)));
         float e = hexEdge(hx.xy * 1.35);
-        if (keep > 0.5 && e > 0.0 && rr > 1.0) {
+        if (keep > 0.5 && e > 0.0) {
             float seam;
-            vec3 tn = normalize(vec3(d * 0.6, 0.6));
-            vec3 c = hexTile(vec4(hx.xy * 1.35, hx.zw), tn, 9.0, seam);
-            float ta = smoothstep(0.0, 0.02, e) * (1.0 - smoothstep(1.2, 1.45, rr));
+            vec3 tn = normalize(vec3(cd * 0.6, 0.6));
+            vec3 c = tileShade(e, normalize(hx.xy + 1e-5), h, tn, seam);
+            float ta = smoothstep(0.0, 0.02, e) * (1.0 - smoothstep(1.3, 1.45, rc));
             col = mix(col, c, ta);
             a = max(a, ta);
         }

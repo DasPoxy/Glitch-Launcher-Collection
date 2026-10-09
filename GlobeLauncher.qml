@@ -23,7 +23,8 @@ Item {
     // captured through it, then the launcher glitches in over that capture
     property bool capturing: false
     function open(payloadJson) {
-        if (view.openingWanted && !root.opened) {
+        if (view.closingFx) view.playOpening()        // reopened mid-close: straight back in
+        else if (view.openingWanted && !root.opened) {
             root.capturing = true
             view.opening = 0
             deskShot.captureFrame()
@@ -55,18 +56,29 @@ Item {
         }
     }
 
+    // closing - from the shell (its toggle / hide, e.g. the key again) or
+    // ourselves (Esc, a launch): glitch out first, then go
     function close() {
+        if (root.opened && view.openingWanted && !view.closingFx && !root.capturing) {
+            view.playClosing(function() { root.finish() })
+            return
+        }
+        if (view.closingFx) return                  // already on its way out
+        root.finish()
+    }
+    function finish() {
         captureWait.stop()
         root.capturing = false
+        view.closingFx = false
+        view.opening = 1
         root.opened = false
     }
 
     function dismiss() {
-        captureWait.stop()
-        root.capturing = false
-        root.opened = false
         if (root.shell && typeof root.shell.hide === "function")
-            root.shell.hide((root.manifest && root.manifest.id) || "globe-launcher")
+            root.shell.hide((root.manifest && root.manifest.id) || "globe-launcher")     // -> close()
+        else
+            root.close()
     }
 
     function toggle() {
@@ -78,7 +90,7 @@ Item {
         id: panel
         visible: root.opened
         anchors { top: true; bottom: true; left: true; right: true }
-        color: root.capturing ? "transparent" : "black"
+        color: root.capturing || view.closingFx ? "transparent" : "black"
         WlrLayershell.namespace: "globe-launcher"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive

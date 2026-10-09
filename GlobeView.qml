@@ -555,12 +555,33 @@ FocusScope {
     // launcher in one of the enabled kinds (1 when not opening)
     property real opening: 1
     readonly property bool openingWanted: settings.openGlitch !== false
-    function playOpening() {
+    function pickTransitionKind() {
         const on = (settings.glitchKinds || glitchKinds).filter(g => glitchKinds.includes(g))
         const all = on.length ? on : glitchKinds.slice(0, 5)
         glitchKind = Math.max(0, glitchKinds.indexOf(all[Math.floor(Math.random() * all.length)]))
         glitchSeed = Math.random() * 100
+    }
+    function playOpening() {
+        closeAnim.stop()
+        closingFx = false
+        pickTransitionKind()
         openAnim.restart()
+    }
+    // closing: the same, backwards, to see-through (the window shows the
+    // live desktop where the launcher has gone); then done() hides it
+    property bool closingFx: false
+    property var closeDone: null
+    function playClosing(done) {
+        openAnim.stop()
+        pickTransitionKind()
+        closeDone = done
+        closingFx = true
+        closeAnim.restart()
+    }
+    NumberAnimation {
+        id: closeAnim; target: view; property: "opening"; from: 1; to: 0
+        duration: view.glitchKind === 3 ? 560 : 440; easing.type: Easing.InOutQuad
+        onFinished: { const d = view.closeDone; view.closeDone = null; if (d) d() }
     }
     NumberAnimation {
         id: openAnim; target: view; property: "opening"; from: 0; to: 1
@@ -1054,6 +1075,7 @@ FocusScope {
         property real kind: view.glitchKind
         property real trans: view.opening
         property real crt: view.settings.crt ? 1 : 0
+        property real closing: view.closingFx ? 1 : 0
         property var desk: deskTex
         fragmentShader: Qt.resolvedUrl("shaders/glitch.frag.qsb")
     }
@@ -1224,7 +1246,7 @@ FocusScope {
                 Chip { label: "Normal"; on: view.settings.glitch === "normal"; onClicked: view.setSetting("glitch", "normal") }
                 Chip { label: "Subtle"; on: view.settings.glitch === "subtle"; onClicked: view.setSetting("glitch", "subtle") }
                 Chip { label: "Off"; on: view.settings.glitch === "off"; onClicked: view.setSetting("glitch", "off") }
-                Chip { label: "Opening glitch"; on: view.settings.openGlitch !== false; onClicked: view.setSetting("openGlitch", view.settings.openGlitch === false) }
+                Chip { label: "Open/close glitch"; on: view.settings.openGlitch !== false; onClicked: view.setSetting("openGlitch", view.settings.openGlitch === false) }
             }
             // which kinds: click one to switch it on (and see it) or off
             Flow {

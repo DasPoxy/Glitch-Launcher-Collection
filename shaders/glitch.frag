@@ -10,9 +10,10 @@
 // Opening (trans 0 -> 1): the same kinds carry the screen over from your
 // desktop (desk, captured as it opened) to the launcher - torn bands, blocks,
 // a rolling band, the desktop switching off and the launcher on, columns
-// dripping, a negative flash.
-// CRT (crt = 1): heavier scanlines, an aperture-grille mask, a curved
-// screen with dark corners, and a faint rolling bar and flicker.
+// dripping, a negative flash. Closing runs it backwards, but to nothing:
+// the window goes see-through there, onto the live desktop.
+// CRT (crt = 1): heavier scanlines, an aperture-grille mask, dark rounded
+// glass corners, and a faint rolling bar and flicker.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {
@@ -27,6 +28,8 @@ layout(std140, binding = 0) uniform buf {
     float kind;
     float trans;       // 1 = the launcher; below 1, opening from the desktop
     float crt;         // 0 / 1
+    float closing;     // 1 while closing: trans runs 1 -> 0, and where the
+                       // launcher has gone the window turns see-through
 };
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D desk;
@@ -60,7 +63,8 @@ float showLauncher = 1.0;
 vec4 tex(vec2 uv) {
     vec4 a = texture(source, uv);
     if (showLauncher >= 1.0) return a;
-    return mix(texture(desk, uv), a, showLauncher);
+    vec4 under = closing > 0.5 ? vec4(0.0) : texture(desk, uv);
+    return mix(under, a, showLauncher);
 }
 vec3 split(vec2 uv, float amount) {
     vec4 c = tex(uv);
@@ -69,14 +73,9 @@ vec3 split(vec2 uv, float amount) {
 
 void main() {
     vec2 uv = qt_TexCoord0;
-    // a curved CRT screen
+    // (CRT doesn't bend the picture: clicks land where things are drawn, so
+    // the curve is only suggested, by the dark rounded glass edge below)
     vec2 cuv = uv;
-    if (crt > 0.5) {
-        vec2 c = uv * 2.0 - 1.0;
-        c *= 1.0 + 0.035 * dot(c, c).xx * vec2(1.0, 1.25);
-        cuv = c * 0.5 + 0.5;
-    }
-    uv = cuv;
     float k = max(intensity, trans < 1.0 ? sin(trans * 3.14159) * 0.85 : 0.0);
     showLauncher = reveal(uv);
     vec3 col;
@@ -164,11 +163,22 @@ void main() {
         col *= mask * 1.12;
         col *= 1.0 + 0.04 * smoothstep(0.0, 0.08, 0.08 - abs(fract(uv.y - time * 0.07) - 0.5));
         col *= 0.985 + 0.015 * sin(time * 120.0);
-        // the glass ends: dark, softly rounded corners
+        // the glass: dark, softly rounded corners and a shade toward the
+        // edges, as if it bowed out
         vec2 e = abs(cuv * 2.0 - 1.0);
-        float edge = smoothstep(1.0, 0.985, max(e.x, e.y));
-        float corner = smoothstep(0.0, 0.06, 1.0 - length(max(e - 0.9, 0.0)) * 6.0);
-        col *= edge * corner;
+        vec2 px2 = e * resolution * 0.5;                   // px from the centre
+        vec2 inner = resolution * 0.5 - vec2(46.0);
+        float rd = length(max(px2 - inner, 0.0)) - 40.0;   // rounded-rect distance
+        float corner = 1.0 - smoothstep(-6.0, 2.0, rd);
+        float bow = 1.0 - 0.22 * pow(max(e.x, e.y), 6.0);
+        col *= corner * bow;
     }
-    fragColor = vec4(col, 1.0) * qt_Opacity;
+    // closing: see-through wherever the launcher has gone (its glitchy
+    // light still shows over the desktop)
+    float alpha = 1.0;
+    if (closing > 0.5 && trans < 1.0) {
+        alpha = clamp(max(showLauncher, max(col.r, max(col.g, col.b)) * 1.4), 0.0, 1.0);
+        if (kind > 2.5 && kind < 3.5) alpha = clamp(max(col.r, max(col.g, col.b)) * 2.0, 0.0, 1.0);
+    }
+    fragColor = vec4(col, alpha) * qt_Opacity;
 }

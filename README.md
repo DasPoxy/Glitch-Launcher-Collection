@@ -14,7 +14,8 @@ of being jacked into a terminal.
   a glowing eye-vent, a horned mouth firing a beam as it turns, a ring of
   lights round it) or a **dyson sphere** (a lattice shell round a star, its light
   escaping through the gaps), **matrix rain** (code falling down the sphere in
-  columns) or **bestagon** (glass hex tiles with glowing edges and data points,
+  columns) or **bestagon** (a Goldberg sphere of whole glass hex tiles - and the
+  twelve pentagons any such sphere needs - with glowing edges and data points,
   the far side's lattice showing through, solid tiles popped out, loose ones
   drifting off the edge). Its far side shows faintly
   through, with a rim glow and a halo. Every app sits on it, evenly
@@ -24,11 +25,12 @@ of being jacked into a terminal.
   its name; a card at the bottom shows its logo and description.
 - **Keyboard**: arrow keys hop to the nearest app that way, typing filters,
   Enter launches, Esc clears the search or closes.
-- **Opening**: the launcher glitches in over your desktop (captured as it
+- **Opening and closing**: the launcher glitches in over your desktop (captured as it
   opens) in one of the enabled glitch kinds - torn bands, blocks, a rolling
-  VHS band, a CRT switching off and on, dripping columns, a negative flash.
-- **CRT monitor** (toggle): heavier scanlines, an aperture-grille mask, a
-  curved screen with dark corners, a faint rolling bar and flicker.
+  VHS band, a CRT switching off and on, dripping columns, a negative flash -
+  and glitches back out to it when it closes (a random kind each time).
+- **CRT monitor** (toggle): heavier scanlines, an aperture-grille mask, dark
+  rounded glass corners (the picture isn't bent, so clicks stay true), a faint rolling bar and flicker.
 - **Atmosphere**: a full-resolution starfield under a nebula (swirling gas
   and near dust lanes and motes, sliding past one another in parallax as the
   globe turns and the mouse moves; toggle it in the options), and now and then a glitch, one of:
