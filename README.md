@@ -14,8 +14,9 @@ sibling of [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
   wheel or a click browse; **/** filters; **R** jumps to a random theme
   (**Shift+R** applies a random one straight away).
 - **Options** (Ctrl+, or the button top right): the carousel style, the
-  monitor's look, CRT on / off, glitches normal / subtle / off, and the
-  open / close glitch.
+  monitor's look, CRT on / off, glitches normal / subtle / off, the open /
+  close glitch, and whether applying a theme leaves it open or glitches out
+  to the desktop.
 - **The readout**: the theme's name, slug, mode, whether it's stock or
   installed and running, its whole palette (every colour by name and hex,
   typing in row by row) and its backgrounds.
