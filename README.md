@@ -1,6 +1,6 @@
 # Glitch-Launcher-Collection
 
-Three Omarchy shell plugins with one look - old CRT monitors, matrix code,
+Four Omarchy shell plugins with one look - old CRT monitors, matrix code,
 starfields and nebulae, screens that glitch in over your desktop and back
 out again:
 
@@ -9,6 +9,7 @@ out again:
 | **Glitch-Globe-Launcher** | [`glitch-globe-launcher`](glitch-globe-launcher) | an app launcher: your apps projected out from a spinning globe; `>` Omarchy commands, `/` files with previews | Super + Space |
 | **Glitch-Theme-Selector** | [`glitch-theme-selector`](glitch-theme-selector) | every Omarchy theme on a CRT, its palette and backgrounds read out; Enter applies | Super + Shift + Ctrl + Space |
 | **Glitch-Background-Selector** | [`glitch-background-selector`](glitch-background-selector) | the theme's wallpapers, then your own folder; fit modes; Enter sets | Super + Ctrl + Space |
+| **Glitch-Overview** | [`glitch-overview`](glitch-overview) | Alt+Tab for workspaces: every window live on a CRT, each one's CPU and memory scrawled beside it; let go of Alt to go | Alt + Tab |
 
 Each folder is a complete plugin with its own README.
 
@@ -47,7 +48,7 @@ cd Glitch-Launcher-Collection
 
 ./install.sh all              # everything
 ./install.sh theme            # just one
-./install.sh globe background # or a few
+./install.sh globe overview   # or a few
 ./install.sh all --keys       # ...and bind their keys too
 ```
 
@@ -69,7 +70,7 @@ Then:
 ./install.sh list             # what's installed
 ```
 
-Needs `rsync` and `jq`; the selectors use Python 3 with Pillow, the launcher
+Needs `rsync` and `jq`; the selectors and the overview use Python 3 (the selectors with Pillow), the launcher
 also `fd` and `fzf` for its file search.
 
 ## License

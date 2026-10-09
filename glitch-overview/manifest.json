@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "glitch-overview",
+  "name": "Glitch-Overview",
+  "version": "0.1.0",
+  "author": "DasPoxy",
+  "license": "MIT",
+  "description": "An Alt+Tab workspace overview in the Glitch-Launcher-Collection style: every workspace's windows live on a CRT, what each window costs scrawled beside it; fully keyboard driven.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "GlitchOverview.qml"
+  }
+}

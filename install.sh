@@ -2,7 +2,7 @@
 # Glitch-Launcher-Collection's installer: put any of its plugins (or all of
 # them) into Omarchy's shell, update them, or take them out again.
 #
-#   ./install.sh [all | globe | theme | background ...] [--keys]
+#   ./install.sh [all | globe | theme | background | overview ...] [--keys]
 #   ./install.sh update            pull the latest, refresh what's installed
 #   ./install.sh remove COMPONENT ...
 #   ./install.sh list
@@ -12,6 +12,7 @@
 #   globe       SUPER + SPACE                  (the Omarchy menu moves to SUPER + CTRL + ALT + SPACE)
 #   theme       SUPER + SHIFT + CTRL + SPACE   (in place of Omarchy's theme menu)
 #   background  SUPER + CTRL + SPACE           (in place of Omarchy's background switcher)
+#   overview    ALT + TAB / ALT + SHIFT + TAB  (in place of Omarchy's window cycling)
 #
 # Each plugin is copied into ~/.config/omarchy/plugins/<id> and enabled.
 set -euo pipefail
@@ -21,10 +22,10 @@ PLUGINS="$HOME/.config/omarchy/plugins"
 BINDINGS="$HOME/.config/hypr/bindings.lua"
 
 # component -> folder (= plugin id), key, label, extra lines for the binding
-declare -A DIR=([globe]=glitch-globe-launcher [theme]=glitch-theme-selector [background]=glitch-background-selector)
-declare -A KEY=([globe]="SUPER + SPACE" [theme]="SUPER + SHIFT + CTRL + SPACE" [background]="SUPER + CTRL + SPACE")
-declare -A LABEL=([globe]="Glitch-Globe-Launcher" [theme]="Glitch-Theme-Selector" [background]="Glitch-Background-Selector")
-ORDER=(globe theme background)
+declare -A DIR=([globe]=glitch-globe-launcher [theme]=glitch-theme-selector [background]=glitch-background-selector [overview]=glitch-overview)
+declare -A KEY=([globe]="SUPER + SPACE" [theme]="SUPER + SHIFT + CTRL + SPACE" [background]="SUPER + CTRL + SPACE" [overview]="ALT + TAB")
+declare -A LABEL=([globe]="Glitch-Globe-Launcher" [theme]="Glitch-Theme-Selector" [background]="Glitch-Background-Selector" [overview]="Glitch-Overview")
+ORDER=(globe theme background overview)
 
 die() { echo "install.sh: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null || die "needs $1"; }
@@ -34,7 +35,7 @@ component() {                    # accept "theme", "glitch-theme-selector", ...
   for k in "${ORDER[@]}"; do
     if [[ $c == "$k" || $c == "${DIR[$k]}" ]]; then echo "$k"; return; fi
   done
-  die "no component '$1' (globe, theme, background or all)"
+  die "no component '$1' (globe, theme, background, overview or all)"
 }
 
 install_one() {
@@ -63,7 +64,7 @@ bind_keys() {
   local k
   for k in "$@"; do
     local id=${DIR[$k]} key=${KEY[$k]}
-    if grep -q "shell toggle $id" "$BINDINGS"; then
+    if grep -q "shell toggle $id\|shell summon $id" "$BINDINGS"; then
       echo "key for $id already bound"
       continue
     fi
@@ -71,7 +72,14 @@ bind_keys() {
       echo ""
       echo "-- ${LABEL[$k]} (Glitch-Launcher-Collection)"
       echo "hl.unbind(\"$key\")"
-      echo "o.bind(\"$key\", \"${LABEL[$k]}\", \"omarchy-shell shell toggle $id '{}'\")"
+      if [[ $k == overview ]]; then
+        # Alt+Tab summons (never toggles): again while it's up steps on
+        echo "o.bind(\"$key\", \"${LABEL[$k]}\", \"omarchy-shell shell summon $id '{\\\"alt\\\":true,\\\"step\\\":1}'\")"
+        echo "hl.unbind(\"ALT + SHIFT + TAB\")"
+        echo "o.bind(\"ALT + SHIFT + TAB\", \"${LABEL[$k]} (back)\", \"omarchy-shell shell summon $id '{\\\"alt\\\":true,\\\"step\\\":-1}'\")"
+      else
+        echo "o.bind(\"$key\", \"${LABEL[$k]}\", \"omarchy-shell shell toggle $id '{}'\")"
+      fi
       if [[ $k == globe ]] && ! grep -q '"SUPER + CTRL + ALT + SPACE"' "$BINDINGS"; then
         echo "o.bind(\"SUPER + CTRL + ALT + SPACE\", \"Omarchy menu\", \"omarchy-menu toggle\")"
       fi
@@ -106,7 +114,7 @@ case $cmd in
     ;;
   remove)
     shift
-    (( $# )) || die "remove which? (globe, theme, background or all)"
+    (( $# )) || die "remove which? (globe, theme, background, overview or all)"
     [[ $1 == all ]] && set -- "${ORDER[@]}"
     for c in "$@"; do
       k=$(component "$c")
