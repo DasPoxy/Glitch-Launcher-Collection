@@ -19,7 +19,17 @@ Item {
     // a payload can ask for a glitch right away, to see one:
     //   omarchy-shell shell summon globe-launcher '{"glitch":"vhs"}'
     // or for a traffic level: '{"net":0.8}'
+    // opening with a glitch: the window maps see-through, the desktop is
+    // captured through it, then the launcher glitches in over that capture
+    property bool capturing: false
     function open(payloadJson) {
+        if (view.openingWanted && !root.opened) {
+            root.capturing = true
+            view.opening = 0
+            deskShot.captureFrame()
+            captureWait.tries = 0
+            captureWait.restart()
+        }
         root.opened = true
         Qt.callLater(function() { view.forceActiveFocus() })
         let p = {}
@@ -30,11 +40,30 @@ Item {
     }
     Timer { id: glitchSoon; property string kind: ""; interval: 700; onTriggered: view.fireGlitch(kind) }
 
+    Timer {
+        id: captureWait
+        property int tries: 0
+        interval: 40; repeat: true
+        onTriggered: {
+            tries++
+            // a frame in (or give up after ~0.3 s and glitch in from black)
+            if ((deskShot.hasContent && tries >= 2) || tries > 7) {
+                stop()
+                root.capturing = false
+                view.playOpening()
+            }
+        }
+    }
+
     function close() {
+        captureWait.stop()
+        root.capturing = false
         root.opened = false
     }
 
     function dismiss() {
+        captureWait.stop()
+        root.capturing = false
         root.opened = false
         if (root.shell && typeof root.shell.hide === "function")
             root.shell.hide((root.manifest && root.manifest.id) || "globe-launcher")
@@ -49,15 +78,25 @@ Item {
         id: panel
         visible: root.opened
         anchors { top: true; bottom: true; left: true; right: true }
-        color: "black"
+        color: root.capturing ? "transparent" : "black"
         WlrLayershell.namespace: "globe-launcher"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
         exclusionMode: ExclusionMode.Ignore
 
+        ScreencopyView {
+            id: deskShot
+            anchors.fill: parent
+            captureSource: panel.screen
+            live: false
+            paintCursor: false
+        }
+
         GlobeView {
             id: view
             anchors.fill: parent
+            visible: !root.capturing
+            deskItem: deskShot
             active: root.opened
             focus: true
             closeRequest: function() { root.dismiss() }

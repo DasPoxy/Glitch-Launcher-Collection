@@ -20,7 +20,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
-    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, netStyle: "streams", nebula: true, preview: "grid",
+    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, netStyle: "streams", nebula: true, crt: false, openGlitch: true, preview: "grid",
                               glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed"],
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
@@ -551,6 +551,21 @@ FocusScope {
         shakeToY = (Math.random() - 0.5) * 8 * jolt
         burst.restart()
     }
+    // opening: 0 -> 1, the screen glitching over from the desktop to the
+    // launcher in one of the enabled kinds (1 when not opening)
+    property real opening: 1
+    readonly property bool openingWanted: settings.openGlitch !== false
+    function playOpening() {
+        const on = (settings.glitchKinds || glitchKinds).filter(g => glitchKinds.includes(g))
+        const all = on.length ? on : glitchKinds.slice(0, 5)
+        glitchKind = Math.max(0, glitchKinds.indexOf(all[Math.floor(Math.random() * all.length)]))
+        glitchSeed = Math.random() * 100
+        openAnim.restart()
+    }
+    NumberAnimation {
+        id: openAnim; target: view; property: "opening"; from: 0; to: 1
+        duration: view.glitchKind === 3 ? 760 : 620; easing.type: Easing.InOutQuad
+    }
     Timer {
         id: glitchTimer
         running: view.active && view.glitchesOn
@@ -1037,8 +1052,15 @@ FocusScope {
         property real scanlines: view.glitchesOn ? 1 : 0.3
         property color tint: view.cPrimary
         property real kind: view.glitchKind
+        property real trans: view.opening
+        property real crt: view.settings.crt ? 1 : 0
+        property var desk: deskTex
         fragmentShader: Qt.resolvedUrl("shaders/glitch.frag.qsb")
     }
+    // the desktop as it was when the launcher opened (GlobeLauncher captures
+    // it), for the opening transition
+    property var deskItem: null
+    ShaderEffectSource { id: deskTex; sourceItem: view.deskItem; hideSource: true; live: true; visible: false }
 
     // --------------------------------------------------------------- options
     property bool settingsOpen: false
@@ -1156,6 +1178,7 @@ FocusScope {
                 spacing: 6
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
+                Chip { label: "CRT monitor"; on: view.settings.crt === true; onClicked: view.setSetting("crt", view.settings.crt !== true) }
                 Chip { label: "Nebula"; on: view.settings.nebula !== false; onClicked: view.setSetting("nebula", view.settings.nebula === false) }
             }
 
@@ -1201,6 +1224,7 @@ FocusScope {
                 Chip { label: "Normal"; on: view.settings.glitch === "normal"; onClicked: view.setSetting("glitch", "normal") }
                 Chip { label: "Subtle"; on: view.settings.glitch === "subtle"; onClicked: view.setSetting("glitch", "subtle") }
                 Chip { label: "Off"; on: view.settings.glitch === "off"; onClicked: view.setSetting("glitch", "off") }
+                Chip { label: "Opening glitch"; on: view.settings.openGlitch !== false; onClicked: view.setSetting("openGlitch", view.settings.openGlitch === false) }
             }
             // which kinds: click one to switch it on (and see it) or off
             Flow {

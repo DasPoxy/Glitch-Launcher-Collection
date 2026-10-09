@@ -10,8 +10,8 @@
 //   5 unicron the planet-eater: armour, vents, a mouth firing a beam, a ring
 //   6 dyson   a lattice shell round a star, light escaping through the gaps
 //   7 rain    matrix code falling down the sphere in columns, heads bright
-//   8 hex     bestagons: bevelled iridescent tiles, some popping out, some
-//             drifting loose off the edge
+//   8 hex     bestagons: glass hex tiles with glowing edges, the far side's
+//             lattice through them, solid tiles popped out, loose ones drifting
 // The far side shows faintly through, the rim glows, and a halo sits round
 // the outside.
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -447,6 +447,20 @@ vec3 hexTile(vec4 hx, vec3 n, float face, out float seamOut) {
     col = mix(col, dotColor.rgb * 0.55, seamOut);       // the neon seam
     return col;
 }
+// the hex tiling at a point on the sphere (view space): the cell, its face
+vec4 hexAt(vec3 n, out float face, float k) {
+    vec3 m = transpose(mat3(rotation)) * n;
+    vec3 am = abs(m);
+    vec2 uv;
+    if (am.x >= am.y && am.x >= am.z) { uv = m.yz / am.x; face = m.x > 0.0 ? 1.0 : 2.0; }
+    else if (am.y >= am.z)            { uv = m.xz / am.y; face = m.y > 0.0 ? 3.0 : 4.0; }
+    else                              { uv = m.xy / am.z; face = m.z > 0.0 ? 5.0 : 6.0; }
+    uv = atan(uv) * (4.0 / PI);          // equal-angle: even tiles out to the face edges
+    return hexCell(uv * k);
+}
+// glass bestagons: mostly see-through - faint tinted glass with glowing hex
+// edges and data points at the corners, the far side's lattice showing
+// through - with a scatter of solid tiles popped out, and loose ones drifting
 vec4 hexGlobe(vec2 d, float r2) {
     float rr = sqrt(r2);
     vec3 col = vec3(0.0);
@@ -454,19 +468,40 @@ vec4 hexGlobe(vec2 d, float r2) {
     float k = rings * 0.13;                  // hexes across a face, about
     if (r2 < 1.0) {
         float z = sqrt(1.0 - r2);
+        // the far side: just its lattice, dim
+        float fb;
+        vec4 hb = hexAt(vec3(d, -z), fb, k);
+        float eb = hexEdge(hb.xy);
+        float backLine = smoothstep(0.05, 0.0, eb);
+        col += mix(glowColor.rgb, dotColor.rgb, 0.4) * backLine * 0.28;
+        a = backLine * 0.3;
+        // the near side
         vec3 n = vec3(d, z);
-        vec3 m = transpose(mat3(rotation)) * n;
-        vec3 am = abs(m);
-        vec2 uv;
         float face;
-        if (am.x >= am.y && am.x >= am.z) { uv = m.yz / am.x; face = m.x > 0.0 ? 1.0 : 2.0; }
-        else if (am.y >= am.z)            { uv = m.xz / am.y; face = m.y > 0.0 ? 3.0 : 4.0; }
-        else                              { uv = m.xy / am.z; face = m.z > 0.0 ? 5.0 : 6.0; }
-        uv = atan(uv) * (4.0 / PI);          // equal-angle: even tiles out to the face edges
+        vec4 hx = hexAt(n, face, k);
+        float e = hexEdge(hx.xy);
+        vec2 id = hx.zw + face * 37.0;
+        float h = hash(id);
+        float solid = step(0.82, h);                         // the popped, solid tiles
+        float edgeLine = smoothstep(0.04, 0.0, e);
+        float edgeGlow = exp(-e * 22.0);
+        vec3 tint = iridescent(n, h);
+        // glass: a faint tinted fill, brighter toward its rim (a bevel of light)
+        float glass = 0.08 + 0.12 * smoothstep(0.2, 0.05, e) + 0.05 * hash(id + 2.0);
+        // data points at the corners and centres, twinkling
+        float corner = smoothstep(0.03, 0.0, abs(length(hx.xy) - 0.577)) * smoothstep(0.06, 0.0, e);
+        float centre = smoothstep(0.05, 0.0, length(hx.xy)) * step(0.55, hash(id + floor(time * 1.5)));
         float seam;
-        col = hexTile(hexCell(uv * k), n, face, seam);
+        vec3 tile = hexTile(hx, n, face, seam);
+        float fill = mix(glass, 0.95, solid);
+        col = mix(col, tint * 0.9, fill * (1.0 - solid));
+        col = mix(col, tile, solid * (1.0 - seam));
+        col += dotColor.rgb * (edgeLine * 0.75 + edgeGlow * 0.25) * (0.6 + 0.4 * z);
+        col += mix(dotColor.rgb, vec3(1.0), 0.5) * (corner * 0.5 + centre * 0.7);
+        a = max(a, max(fill, max(edgeLine * 0.9, edgeGlow * 0.4)));
+        a = max(a, max(corner, centre));
         col += glowColor.rgb * pow(1.0 - z, 2.4) * 0.5;
-        a = 1.0;
+        a = max(a, pow(1.0 - z, 2.4) * 0.5);
     }
     // loose tiles drifting past the edge
     if (rr > 0.98 && rr < 1.45) {
