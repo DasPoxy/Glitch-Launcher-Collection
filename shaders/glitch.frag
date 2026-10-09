@@ -30,6 +30,9 @@ layout(std140, binding = 0) uniform buf {
     float crt;         // 0 / 1
     float closing;     // 1 while closing: trans runs 1 -> 0, and where the
                        // launcher has gone the window turns see-through
+    vec2 shockCenter;  // <namek's blast: its ring, px from the centre,
+    float shockR;      // bending and splitting the picture as it passes
+    float shockAmt;    // 0..1
 };
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D desk;
@@ -76,7 +79,20 @@ void main() {
     // (CRT doesn't bend the picture: clicks land where things are drawn, so
     // the curve is only suggested, by the dark rounded glass edge below)
     vec2 cuv = uv;
-    float k = max(intensity, trans < 1.0 ? sin(trans * 3.14159) * 0.85 : 0.0);
+    // the blast's shockwave: a ring that bends the picture outward and
+    // splits its colours as it passes, the screen jolting with it
+    float shockSplit = 0.0;
+    if (shockAmt > 0.0) {
+        vec2 px0 = uv * resolution;
+        vec2 rel = px0 - shockCenter;
+        float dist = length(rel);
+        float band = exp(-pow((dist - shockR) / 55.0, 2.0));
+        uv -= rel / max(dist, 1.0) * band * 14.0 * shockAmt / resolution;
+        uv += vec2(sin(uv.y * 90.0 + time * 60.0), 0.0) * 0.0012 * shockAmt * shockAmt;   // the feed shuddering
+        shockSplit = band * shockAmt;
+        cuv = uv;
+    }
+    float k = max(max(intensity, trans < 1.0 ? sin(trans * 3.14159) * 0.85 : 0.0), shockSplit * 0.3);
     showLauncher = reveal(uv);
     vec3 col;
 

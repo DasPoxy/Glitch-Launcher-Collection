@@ -448,7 +448,7 @@ FocusScope {
         event.accepted = true
     }
     // fresh each time it opens
-    onActiveChanged: if (active) { doom = ""; doomT = 0; doomChunks = []; doomSaid = 0; if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
+    onActiveChanged: if (active) { burstPeak = 1; doom = ""; doomT = 0; doomChunks = []; doomSaid = 0; if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
 
     // --------------------------------------------------------- the readout
     // linger on something for a few seconds and the corner terminal scans it:
@@ -605,10 +605,24 @@ FocusScope {
         const keep = selected
         doom = "boom"
         doomT = 0
+        burstPeak = 0.5
         fireGlitch("tear")
         boomFlash.restart()
+        boomGlitches.left = 3
+        boomGlitches.restart()
         if (keep >= 0) aimAt(keep)
         terminal.scrawl(["> ...", "> planet destroyed. the apps drift on."])
+    }
+    // the blast scrambling the feed: a quick run of glitch bursts, any kind
+    Timer {
+        id: boomGlitches
+        property int left: 0
+        interval: 170 + Math.random() * 160
+        repeat: true
+        onTriggered: {
+            view.fireGlitch(["tear", "blocks"][Math.floor(Math.random() * 2)])
+            if (--left <= 0) { stop(); view.burstPeak = 1 }
+        }
     }
     // an app's place in the debris field: a stable spot from its name, flown
     // to from where it was, then bobbing
@@ -641,6 +655,7 @@ FocusScope {
     // the kinds, in the shader's order; each burst is one of the enabled ones
     readonly property var glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed", "invert"]
     property int glitchKind: 0
+    property real burstPeak: 1       // the blast's run of bursts is gentler
     property int glitchHold: 180     // ms at full strength
     function fireGlitch(kind) {
         if (kind === undefined) {
@@ -706,7 +721,7 @@ FocusScope {
     SequentialAnimation {
         id: burst
         ParallelAnimation {
-            NumberAnimation { target: view; property: "glitch"; from: 0; to: view.settings.glitch === "subtle" ? 0.45 : 1; duration: 60 }
+            NumberAnimation { target: view; property: "glitch"; from: 0; to: (view.settings.glitch === "subtle" ? 0.45 : 1) * view.burstPeak; duration: 60 }
             NumberAnimation { target: view; property: "shakeX"; to: view.shakeToX; duration: 60 }
             NumberAnimation { target: view; property: "shakeY"; to: view.shakeToY; duration: 60 }
         }
@@ -882,6 +897,19 @@ FocusScope {
                     fragmentShader: Qt.resolvedUrl("shaders/globe.frag.qsb")
                 }
             }
+        }
+        // the debris field's particles: shards, dust, embers, sparks
+        ShaderEffect {
+            anchors.fill: parent
+            visible: view.exploded
+            property real time: view.driftT
+            property vector2d resolution: Qt.vector2d(width, height)
+            property vector2d center: Qt.vector2d(view.width / 2, view.height * 0.47)
+            property real age: view.doomT
+            property color metal: Qt.rgba(0.32, 0.34, 0.46, 1)
+            property color ember: view.doomColor
+            property color glow: view.cPrimary
+            fragmentShader: Qt.resolvedUrl("shaders/debris.frag.qsb")
         }
         // the blast: a shockwave ring racing out, and a flash over everything
         Rectangle {
@@ -1256,6 +1284,11 @@ FocusScope {
         property real trans: view.opening
         property real crt: view.settings.crt ? 1 : 0
         property real closing: view.closingFx ? 1 : 0
+        // <namek: the shockwave, bending the feed (matches the ring drawn in the scene)
+        readonly property real shockK: Math.min(1, view.doomT / 1.4)
+        property vector2d shockCenter: Qt.vector2d(view.width / 2, view.height * 0.47)
+        property real shockR: view.radius * (0.6 + shockK * 5)
+        property real shockAmt: view.exploded && view.doomT < 1.6 ? 1 - shockK : 0
         property var desk: deskTex
         fragmentShader: Qt.resolvedUrl("shaders/glitch.frag.qsb")
     }
