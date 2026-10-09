@@ -20,7 +20,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
-    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true,
+    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, preview: "grid",
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
@@ -58,6 +58,7 @@ FocusScope {
     readonly property color cBg: pal.background
     readonly property color cText: pal.text
     readonly property string mono: Style.font.family || "monospace"
+    readonly property string glyphFont: Style.font.menuFamily || mono    // the Omarchy menu's icons
 
     // ------------------------------------------------------------------ nodes
     // What sits on the globe, by what's typed: your apps; after ">", Omarchy's
@@ -96,19 +97,84 @@ FocusScope {
             }
         }
     }
-    // after ">": the matching commands; once a whole command is typed and a
+    // the Omarchy menu's actions (its default file, then your extension of it,
+    // which can override rows): what ">" shows before you type. Rows whose
+    // `when` fails here (no laptop, no webcam...) are left out, as in the menu.
+    readonly property string omarchyPath: Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy"
+    property var menuAll: []
+    property var menuItems: []
+    FileView { id: menuDefault; path: view.omarchyPath + "/default/omarchy/omarchy-menu.jsonc"; printErrors: false; watchChanges: true; onFileChanged: reload(); onLoaded: view.buildMenu() }
+    FileView { id: menuUser; path: Quickshell.env("HOME") + "/.config/omarchy/extensions/omarchy-menu.jsonc"; printErrors: false; watchChanges: true; onFileChanged: reload(); onLoaded: view.buildMenu() }
+    function parseJsonc(raw) {
+        try { return JSON.parse(String(raw || "").replace(/^\s*\/\/[^\n]*(\n|$)/gm, "").replace(/,(\s*[}\]])/g, "$1")) || {} }
+        catch (e) { return {} }
+    }
+    function buildMenu() {
+        const all = {}, order = []
+        for (const src of [parseJsonc(menuDefault.text()), parseJsonc(menuUser.text())]) {
+            const items = src.items && typeof src.items === "object" ? src.items : src
+            for (const id in items) {
+                const e = items[id]
+                if (!e || typeof e !== "object" || Array.isArray(e)) continue
+                if (!all[id]) order.push(id)
+                all[id] = Object.assign({}, all[id] || {}, e)
+            }
+        }
+        const label = id => (all[id] && all[id].label) || id.split(".").pop()
+        const out = []
+        for (const id of order) {
+            const e = all[id]
+            if (id === "apps" || id.startsWith("apps.")) continue       // the globe is for apps already
+            // an action, or a submenu filled at runtime (fonts): open it in the menu
+            const run = e.action || (e.provider ? "omarchy-menu summon " + id : "")
+            if (!run) continue
+            const parts = id.split("."), trail = []
+            for (let i = 1; i < parts.length; i++) trail.push(label(parts.slice(0, i).join(".")))
+            const name = e.label || parts[parts.length - 1], where = trail.join(" › ")
+            const aliases = Array.isArray(e.aliases) ? e.aliases.join(" ") : (e.aliases || "")
+            out.push({ kind: "menu", id: id, name: name, sub: where, detail: e.description || run, glyph: e.icon || "",
+                       icon: "", run: run, when: e.when || "", nameLower: name.toLowerCase(),
+                       words: [where, name, e.description || "", e.keywords || "", aliases].join(" ").toLowerCase() })
+        }
+        menuAll = out
+        checkMenu()
+    }
+    // every `when` at once; prints the indexes of the rows that stay
+    function checkMenu() {
+        whenChecker.running = false
+        whenChecker.command = ["bash", "-c", menuAll.map((m, i) => m.when
+            ? "{ " + m.when + "\n} >/dev/null 2>&1 </dev/null && echo " + i + " &" : "echo " + i).join("\n") + "\nwait"]
+        whenChecker.running = true
+    }
+    Process {
+        id: whenChecker
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const keep = {}
+                for (const l of text.split("\n")) if (l) keep[l] = true
+                view.menuItems = view.menuAll.filter((m, i) => keep[i])
+            }
+        }
+    }
+
+    // after ">": the menu's actions; typing searches them and every Omarchy
+    // command (menu rows first); once a whole command is typed and a
     // space after it, just that one, with what follows as its arguments
     readonly property var commandNodes: {
         const t = term
+        if (!t) return menuItems
         let exact = null
         for (const c of commands) if (t.startsWith(c.base.toLowerCase() + " ") && (!exact || c.base.length > exact.base.length)) exact = c
         if (exact) return [Object.assign({}, exact, { typedArgs: query.slice(1).trim().slice(exact.base.length).trim() })]
         const words = t.split(/\s+/).filter(w => w)
         // best first: the name starts with what's typed, then has every word
         // in it, then the rest (words only in the description)
-        const rank = c => c.baseLower.startsWith(t) ? 0 : words.every(w => c.baseLower.includes(w)) ? 1 : 2
-        return commands.filter(c => words.every(w => c.words.includes(w)))
-            .map(c => ({ c: c, r: rank(c) })).sort((a, b) => a.r - b.r || a.c.base.length - b.c.base.length)
+        const rank = c => {
+            const key = c.kind === "menu" ? c.nameLower : c.baseLower
+            return (key.startsWith(t) ? 0 : words.every(w => key.includes(w)) ? 1 : 2) * 2 + (c.kind === "menu" ? 0 : 1)
+        }
+        return menuItems.concat(commands).filter(c => words.every(w => c.words.includes(w)))
+            .map(c => ({ c: c, r: rank(c) })).sort((a, b) => a.r - b.r || a.c.name.length - b.c.name.length)
             .map(x => x.c).slice(0, 160)
     }
 
@@ -158,6 +224,7 @@ FocusScope {
     }
     onModeChanged: {
         if (mode === "cmd" && commands.length === 0 && !cmdLister.running) cmdLister.running = true
+        if (mode === "cmd" && menuAll.length) checkMenu()                       // whens can change (recording...)
         if (mode === "file" && !fileIndexer.running) fileIndexer.running = true      // fresh each time
     }
     onTermChanged: if (mode === "file") fileDebounce.restart()
@@ -277,6 +344,11 @@ FocusScope {
             launched()
             return
         }
+        if (n.kind === "menu") {
+            Quickshell.execDetached(alt ? ["omarchy-launch-floating-terminal-with-presentation", n.run] : ["bash", "-lc", n.run])
+            launched()
+            return
+        }
         // a command that needs arguments: type them first
         const args = n.typedArgs || ""
         if (n.needsArg && !args) { query = "> " + n.base + " "; return }
@@ -316,6 +388,11 @@ FocusScope {
         else if (k === Qt.Key_Up) hop(0, -1)
         else if (k === Qt.Key_Down) hop(0, 1)
         else if (k === Qt.Key_Comma && (event.modifiers & Qt.ControlModifier)) settingsOpen = true
+        else if ((k === Qt.Key_Tab || k === Qt.Key_Backtab) && mode === "file") {
+            // the preview's look, round and round (Shift+Tab: backwards)
+            const looks = ["clean", "grid", "glyph", "rain"], back = k === Qt.Key_Backtab || (event.modifiers & Qt.ShiftModifier)
+            setSetting("preview", looks[(looks.indexOf(settings.preview) + (back ? 3 : 1)) % 4])
+        }
         else if (k === Qt.Key_Backspace) query = query.slice(0, -1)
         else if (event.text && event.text.length === 1 && event.text >= " " && !(event.modifiers & Qt.ControlModifier)) query += event.text
         else return
@@ -460,8 +537,18 @@ FocusScope {
                     }
                     IconImage {
                         anchors.fill: parent
-                        source: Quickshell.iconPath(node.modelData.icon || "", "application-x-executable")
+                        visible: !node.modelData.glyph
+                        source: node.modelData.glyph ? "" : Quickshell.iconPath(node.modelData.icon || "", "application-x-executable")
                         asynchronous: true
+                    }
+                    // the Omarchy menu's rows have a Nerd Font glyph instead
+                    Text {
+                        anchors.centerIn: parent
+                        visible: !!node.modelData.glyph
+                        text: node.modelData.glyph || ""
+                        color: view.cPrimary
+                        font.family: view.glyphFont
+                        font.pixelSize: parent.width * 0.62
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -502,6 +589,26 @@ FocusScope {
             }
         }
 
+        // after "/": the selected file, previewed beside the globe (when there's room)
+        FilePreview {
+            readonly property real room: parent.width / 2 - view.radius * view.lift - 130
+            anchors.right: parent.right
+            anchors.rightMargin: 40
+            y: 120
+            width: Math.min(680, room)
+            height: parent.height - y - 60
+            visible: opacity > 0
+            active: view.active && view.mode === "file" && room >= 320
+            file: view.mode === "file" ? (view.nodes[view.selected] || null) : null
+            look: view.settings.preview || "grid"
+            time: view.driftT
+            primary: view.cPrimary
+            glow: view.cGlow
+            bg: view.cBg
+            fg: view.cText
+            mono: view.mono
+        }
+
         // ------------------------------------------------------------- the HUD
         // top: what you're searching for
         Column {
@@ -510,7 +617,7 @@ FocusScope {
             spacing: 6
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "// GLOBE-LAUNCHER  ·  " + view.nodes.length + (view.mode === "cmd" ? " OMARCHY COMMANDS" : view.mode === "file" ? " FILES" : " APPS")
+                text: "// GLOBE-LAUNCHER  ·  " + view.nodes.length + (view.mode === "cmd" ? (view.term ? " OMARCHY ACTIONS + COMMANDS" : " OMARCHY MENU ACTIONS") : view.mode === "file" ? " FILES" : " APPS")
                       + (view.term ? "  ·  FILTER ACTIVE" : "")
                 color: view.cPrimary; opacity: 0.7
                 font.family: view.mono; font.pixelSize: 13; font.letterSpacing: 2
@@ -543,17 +650,31 @@ FocusScope {
                 anchors.fill: parent
                 anchors.margins: 14
                 spacing: 16
-                IconImage {
+                Item {
                     Layout.preferredWidth: 64
                     Layout.preferredHeight: 64
-                    source: card.app ? Quickshell.iconPath(card.app.icon || "", "application-x-executable") : ""
+                    IconImage {
+                        anchors.fill: parent
+                        visible: !!card.app && !card.app.glyph
+                        source: card.app && !card.app.glyph ? Quickshell.iconPath(card.app.icon || "", "application-x-executable") : ""
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        visible: !!card.app && !!card.app.glyph
+                        text: card.app ? (card.app.glyph || "") : ""
+                        color: view.cPrimary
+                        font.family: view.glyphFont
+                        font.pixelSize: 40
+                    }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 2
                     Text {
                         Layout.fillWidth: true; elide: Text.ElideRight
-                        text: !card.app ? "" : card.app.kind === "cmd" ? "omarchy " + card.app.base + " " + (card.app.typedArgs || card.app.sub) : (card.app.name || "").toUpperCase()
+                        text: !card.app ? "" : card.app.kind === "cmd" ? "omarchy " + card.app.base + " " + (card.app.typedArgs || card.app.sub)
+                            : card.app.kind === "menu" ? ((card.app.sub ? card.app.sub + " › " : "") + card.app.name).toUpperCase()
+                            : (card.app.name || "").toUpperCase()
                         color: view.cText; font.family: view.mono; font.pixelSize: 20; font.bold: true; font.letterSpacing: 1.5
                     }
                     Text { Layout.fillWidth: true; elide: Text.ElideMiddle; visible: text !== ""; text: card.app ? (card.app.detail || "") : ""; color: view.cPrimary; opacity: 0.85; font.family: view.mono; font.pixelSize: 13 }
@@ -561,6 +682,7 @@ FocusScope {
                         Layout.fillWidth: true; elide: Text.ElideRight
                         text: !card.app ? ""
                             : card.app.kind === "file" ? "[ENTER] open   [SHIFT+ENTER] open its folder   [← → ↑ ↓] hop   [ESC] back"
+                            : card.app.kind === "menu" ? "[ENTER] run   [SHIFT+ENTER] run in a terminal   [← → ↑ ↓] hop   [type] search all commands   [ESC] back"
                             : card.app.kind === "cmd" ? (card.app.needsArg && !card.app.typedArgs ? "[ENTER] type its arguments: " + card.app.sub + "   [ESC] back"
                                                          : "[ENTER] run   [SHIFT+ENTER] run in a terminal   [← → ↑ ↓] hop   [ESC] back")
                             : "[ENTER] launch   [← → ↑ ↓] hop   [drag] spin   [type] search   [>] commands   [/] files   [CTRL+,] options   [ESC] exit"
@@ -572,7 +694,7 @@ FocusScope {
         Text {
             anchors.centerIn: parent
             visible: view.nodes.length === 0
-            text: view.mode === "cmd" ? (view.commands.length === 0 ? "> reading omarchy commands..." : "> no command matches \"" + view.term + "\"")
+            text: view.mode === "cmd" ? (!view.term ? "> reading the omarchy menu..." : view.commands.length === 0 ? "> reading omarchy commands..." : "> no command matches \"" + view.term + "\"")
                 : view.mode === "file" ? (fileIndexer.running ? "> indexing your files..." : !view.term ? "> type a file name" : "> no file matches \"" + view.term + "\"")
                 : view.allApps.length === 0 ? "> scanning apps..." : "> no app matches \"" + view.term + "\""
             color: view.cText; font.family: view.mono; font.pixelSize: 18
@@ -767,6 +889,20 @@ FocusScope {
                 Chip { label: "Wireframe"; on: view.settings.style === "wire"; onClicked: view.setSetting("style", "wire") }
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
+            }
+
+            Heading { text: "FILE PREVIEW  ·  [TAB] while searching files" }
+            Row {
+                spacing: 6
+                Repeater {
+                    model: ["clean", "grid", "glyph", "rain"]
+                    delegate: Chip {
+                        required property string modelData
+                        label: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        on: (view.settings.preview || "grid") === modelData
+                        onClicked: view.setSetting("preview", modelData)
+                    }
+                }
             }
 
             Heading { text: "GLITCHES" }

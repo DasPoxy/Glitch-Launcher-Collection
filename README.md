@@ -18,14 +18,21 @@ of being jacked into a terminal.
 - **Space traffic**: shooting stars streak past, a comet now and then, and
   spacecraft (fighters, freighters, satellites, sometimes a formation)
   cross the sky in the distance.
-- **`>` Omarchy commands**: type `>` to search `omarchy commands`. Enter runs
-  the selected one (Shift+Enter runs it in a floating terminal); a command
-  that needs arguments fills the prompt first so you can type them.
+- **`>` Omarchy commands**: type `>` to see every action in the Omarchy menu
+  (its glyphs on the globe, `Trigger › Capture › Screenshot` on the card);
+  keep typing to search those and all of `omarchy commands`. Enter runs the
+  selected one (Shift+Enter runs it in a floating terminal); a command that
+  needs arguments fills the prompt first so you can type them.
 - **`/` files**: type `/` to fuzzy-find files in your home, `~/.config` and
   `~/.local/bin` (`fd` + `fzf`). Enter opens the file, Shift+Enter its folder.
+  A terminal pane beside the globe previews the selected one: pictures,
+  videos (muted, looping) and PDFs' first pages through a look you cycle with
+  Tab - clean, grid (duotone with glowing traced blocks), glyph (a mosaic of
+  characters) or rain (code falling through it) - and text files' first
+  lines, archives' contents, audio tags.
 - **Options** (Ctrl+, or the button top right): colours from your Omarchy
   theme, a prebuilt theme (Matrix, Cyber, Ice, Amber, Mono) or your own,
-  dots or wireframe, auto-spin, space traffic, and glitches normal / subtle / off. Saved in
+  dots or wireframe, auto-spin, space traffic, the preview's look, and glitches normal / subtle / off. Saved in
   `~/.config/globe-launcher/settings.json`.
 
 Clicking the selected app (or Enter) launches it and closes the launcher;
@@ -51,10 +58,11 @@ o.bind("SUPER + ALT + SPACE", "Globe-Launcher", "omarchy-shell shell toggle glob
 
 ## How it's drawn
 
-Three small GPU shaders (`shaders/`, compiled to `.qsb` with Qt's `qsb`):
+Four small GPU shaders (`shaders/`, compiled to `.qsb` with Qt's `qsb`):
 the starfield, the globe (each pixel finds its point on the sphere, turns it
 back by the globe's rotation and measures the distance to the nearest dot on
-the rings of latitude), and the glitch pass over everything. The apps come
+the rings of latitude), the file preview's looks, and the glitch pass over
+everything. The apps come
 from the same desktop entries every launcher reads; their places on the globe
 are a Fibonacci sphere, projected with the same rotation the shader uses.
 

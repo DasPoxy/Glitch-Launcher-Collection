@@ -1,0 +1,52 @@
+#!/bin/bash
+# Globe-Launcher's file preview helper: what a file is, and something to show
+# of it. Prints one header line, "path<TAB>kind<TAB>mime<TAB>size<TAB>modified",
+# then a body by kind:
+#   text     its first lines           archive  what's in it
+#   pdf      a thumbnail of page 1     audio    its tags and length
+#   other    file(1)'s description    (image / video: nothing, shown directly)
+# usage: preview.sh FILE THUMB_DIR
+
+f=$1
+thumbs=$2
+
+mime=$(file -b --mime-type -- "$f" 2>/dev/null)
+size=$(stat -c %s -- "$f" 2>/dev/null || echo 0)
+modified=$(stat -c %y -- "$f" 2>/dev/null | cut -d. -f1)
+
+case $mime in
+  image/*) kind=image ;;
+  video/*) kind=video ;;
+  audio/*) kind=audio ;;
+  application/pdf) kind=pdf ;;
+  text/* | inode/x-empty | application/json | application/javascript | application/xml | \
+  application/toml | application/x-*script* | application/x-desktop | application/x-subrip) kind=text ;;
+  application/zip | application/x-tar | application/gzip | application/x-xz | application/x-7z-compressed | \
+  application/vnd.rar | application/x-rar | application/zstd | application/x-bzip2 | application/java-archive) kind=archive ;;
+  *) kind=other ;;
+esac
+
+printf '%s\t%s\t%s\t%s\t%s\n' "$f" "$kind" "$mime" "$size" "$modified"
+
+case $kind in
+  text)
+    head -c 16000 -- "$f" | head -n 140 | cut -c1-180
+    ;;
+  archive)
+    bsdtar -tf "$f" 2>/dev/null | head -n 120
+    ;;
+  pdf)
+    mkdir -p "$thumbs"
+    out="$thumbs/$(printf '%s:%s' "$f" "$modified" | md5sum | cut -c1-20)"
+    [[ -f $out.png ]] || pdftoppm -png -singlefile -r 80 -f 1 -l 1 -- "$f" "$out" 2>/dev/null
+    [[ -f $out.png ]] && echo "$out.png"
+    ;;
+  audio)
+    ffprobe -v quiet -show_entries format=duration:format_tags=title,artist,album,date,genre \
+      -of default=noprint_wrappers=1 -- "$f" 2>/dev/null | sed 's/^TAG://'
+    ;;
+  image | video) ;;
+  *)
+    file -b -- "$f" 2>/dev/null
+    ;;
+esac
