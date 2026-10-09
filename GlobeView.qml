@@ -20,7 +20,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
-    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, nebula: true, preview: "grid",
+    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, netStyle: "streams", nebula: true, preview: "grid",
                               glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed"],
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
@@ -62,7 +62,16 @@ FocusScope {
     readonly property color cText: pal.text
     readonly property string mono: Style.font.family || "monospace"
     // the globe's looks, in the shader's order
-    readonly property var globeStyles: ["dots", "wire", "binary", "code", "holo", "unicron", "dyson"]
+    readonly property var globeStyles: ["dots", "wire", "binary", "code", "holo", "unicron", "dyson", "rain", "hex"]
+    // the style drawn: the chosen one, or with "random" a fresh pick (not
+    // the last one again) each time it opens
+    property string randomStyle: "dots"
+    readonly property string activeStyle: settings.style === "random" ? randomStyle
+        : globeStyles.indexOf(settings.style) < 0 ? "dots" : settings.style
+    function pickRandomStyle() {
+        const others = globeStyles.filter(g => g !== randomStyle)
+        randomStyle = others[Math.floor(Math.random() * others.length)]
+    }
     readonly property string glyphFont: Style.font.menuFamily || mono    // the Omarchy menu's icons
 
     // ------------------------------------------------------------------ nodes
@@ -412,7 +421,7 @@ FocusScope {
         event.accepted = true
     }
     // fresh each time it opens
-    onActiveChanged: if (active) { query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
+    onActiveChanged: if (active) { if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
 
     // --------------------------------------------------------- the readout
     // linger on something for a few seconds and the corner terminal scans it:
@@ -639,9 +648,13 @@ FocusScope {
             dark: view.cBg
         }
 
-        // network traffic: packets streaming in to the globe (down) and out (up)
+        // network traffic: packets streaming in to the globe (down) and out
+        // (up) - or, as orbits, rings round it, drawn over the globe (their
+        // far halves come dimmed) but under the apps
         ShaderEffect {
             anchors.fill: parent
+            z: view.settings.netStyle === "orbits" ? 5 : 0
+            property real mode: view.settings.netStyle === "orbits" ? 1 : 0
             visible: view.netOn
             property real time: view.driftT
             property vector2d resolution: Qt.vector2d(width, height)
@@ -666,7 +679,7 @@ FocusScope {
             property color dotColor: view.cPrimary
             property color glowColor: view.cGlow
             property real rings: 34
-            property real style: Math.max(0, view.globeStyles.indexOf(view.settings.style))
+            property real style: Math.max(0, view.globeStyles.indexOf(view.activeStyle))
             property real pulse: view.pulse
             property var land: landMap
             property var glyphs: globeGlyphTex
@@ -806,6 +819,7 @@ FocusScope {
 
         // after "/": the selected file, previewed beside the globe (when there's room)
         FilePreview {
+            z: 30                                   // over the globe's apps and orbits
             readonly property real room: parent.width / 2 - view.radius * view.lift - 130
             anchors.right: parent.right
             anchors.rightMargin: 40
@@ -857,6 +871,7 @@ FocusScope {
         // bottom: the selected app, big
         Rectangle {
             id: card
+            z: 30
             readonly property var app: view.nodes[view.selected] || null
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
@@ -1126,11 +1141,11 @@ FocusScope {
                 spacing: 6
                 Repeater {
                     model: [["dots", "Dots"], ["wire", "Wireframe"], ["binary", "Binary"], ["code", "Code Earth"], ["holo", "Holo Earth"],
-                            ["unicron", "Unicron"], ["dyson", "Dyson Sphere"]]
+                            ["unicron", "Unicron"], ["dyson", "Dyson Sphere"], ["rain", "Matrix Rain"], ["hex", "Bestagon"], ["random", "Random"]]
                     delegate: Chip {
                         required property var modelData
                         label: modelData[1]
-                        on: (view.globeStyles.indexOf(view.settings.style) < 0 ? "dots" : view.settings.style) === modelData[0]
+                        on: (view.settings.style === "random" || view.globeStyles.indexOf(view.settings.style) >= 0 ? view.settings.style : "dots") === modelData[0]
                         onClicked: view.setSetting("style", modelData[0])
                     }
                 }
@@ -1142,7 +1157,24 @@ FocusScope {
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
                 Chip { label: "Nebula"; on: view.settings.nebula !== false; onClicked: view.setSetting("nebula", view.settings.nebula === false) }
-                Chip { label: "Network particles"; on: view.settings.net !== false; onClicked: view.setSetting("net", view.settings.net === false) }
+            }
+
+            Heading { text: "NETWORK TRAFFIC" }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Chip { label: "Off"; on: view.settings.net === false; onClicked: view.setSetting("net", false) }
+                Chip {
+                    label: "Particles"
+                    on: view.settings.net !== false && view.settings.netStyle !== "orbits"
+                    onClicked: { view.setSetting("net", true); view.setSetting("netStyle", "streams") }
+                }
+                Chip {
+                    label: "Orbits"
+                    on: view.settings.net !== false && view.settings.netStyle === "orbits"
+                    onClicked: { view.setSetting("net", true); view.setSetting("netStyle", "orbits") }
+                }
             }
 
             Heading { text: "FILE PREVIEW  ·  [TAB] cycles"; Layout.fillWidth: true; wrapMode: Text.WordWrap }

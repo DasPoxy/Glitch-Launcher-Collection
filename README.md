@@ -4,7 +4,8 @@ A full-screen app launcher for [Omarchy](https://omarchy.org): your installed
 apps, projected out from a spinning dot-globe over a starfield, with the feel
 of being jacked into a terminal.
 
-- **The globe**, in one of seven styles: glowing rings of **dots**, a
+- **The globe**, in one of nine styles (or **random**: a different one each
+  time it opens): glowing rings of **dots**, a
   **wireframe**, **binary** (a skin of flickering 0s and 1s, light rays
   round the rim), **code earth** (the continents built of matrix glyphs,
   debris drifting about) or **holo earth** (dotted continents, lit
@@ -12,7 +13,9 @@ of being jacked into a terminal.
   planet-eater: a cratered cap with a trench across it, a belt with antennae,
   a glowing eye-vent, a horned mouth firing a beam as it turns, a ring of
   lights round it) or a **dyson sphere** (a lattice shell round a star, its light
-  escaping through the gaps). Its far side shows faintly
+  escaping through the gaps), **matrix rain** (code falling down the sphere in
+  columns) or **bestagon** (bevelled iridescent hex tiles, some popping out,
+  loose ones drifting off the edge). Its far side shows faintly
   through, with a rim glow and a halo. Every app sits on it, evenly
   spread, and is projected out on a beam.
 - **Spin it**: drag (it keeps its momentum), scroll to zoom, or leave it to
@@ -27,9 +30,11 @@ of being jacked into a terminal.
   which in the options) - and a terminal in the corner types a line. Linger on a selection for a
   few seconds and it scans it: an app's description, categories and command;
   a file's type, size, length or pixels, folder; a command's arguments.
-- **Network particles**: your real throughput (from `/proc/net/dev`) as packets
-  of light streaming in to the globe (downloads) and out of it (uploads),
-  with static crackling over the screen; busier traffic, more lanes, faster.
+- **Network traffic**: your real throughput (from `/proc/net/dev`), as
+  **particles** - packets of light streaming in to the globe (downloads) and
+  out of it (uploads), with static crackling over the screen - or as
+  **orbits** - rings round the globe with packets riding them, more rings and
+  faster the busier it is. Or off.
   The rates show under the prompt.
 - **Space traffic**: shooting stars streak past, a comet now and then, and
   spacecraft (fighters, freighters, satellites, sometimes a formation)

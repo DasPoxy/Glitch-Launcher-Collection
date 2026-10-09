@@ -9,6 +9,9 @@
 //   4 holo    dotted continents with lit coastlines, orbit rings round it
 //   5 unicron the planet-eater: armour, vents, a mouth firing a beam, a ring
 //   6 dyson   a lattice shell round a star, light escaping through the gaps
+//   7 rain    matrix code falling down the sphere in columns, heads bright
+//   8 hex     bestagons: bevelled iridescent tiles, some popping out, some
+//             drifting loose off the edge
 // The far side shows faintly through, the rim glows, and a halo sits round
 // the outside.
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -60,13 +63,15 @@ void cells(float lat, float lon, float n, out vec2 id, out vec2 f, out vec2 c) {
     c = vec2(rowLat, (col + 0.5) * stepLon - PI);
 }
 
+int sid() { return int(style + 0.5); }
+
 // how lit the surface point n (view space, unit) is
 float pattern(vec3 n, bool front) {
     vec3 m = transpose(mat3(rotation)) * n;          // back to the globe's own frame
     float lat = asin(clamp(m.y, -1.0, 1.0));
     float lon = atan(m.z, m.x);
 
-    if (style > 1.5 && style < 2.5) {
+    if (sid() == 2) {
         // binary: every cell a 0 or a 1, flipping now and then, some bright
         vec2 id, f, c;
         cells(lat, lon, rings * 1.6, id, f, c);
@@ -74,7 +79,7 @@ float pattern(vec3 n, bool front) {
         float lit = 0.35 + 0.65 * step(0.55, hash(id * 1.7 + floor(time * 0.7)));
         return glyph(k, f) * lit * 1.2;
     }
-    if (style > 2.5 && style < 3.5) {
+    if (sid() == 3) {
         // code earth: glyph cells where there's land, the sea all but empty
         vec2 id, f, c;
         cells(lat, lon, rings * 1.9, id, f, c);
@@ -87,7 +92,32 @@ float pattern(vec3 n, bool front) {
         float lit = 0.6 + 0.4 * hash(id) + flare;
         return l * (g * lit * 1.1 + box * 0.28 * lit) + (1.0 - l) * g * 0.06 * step(0.8, hash(id + 4.2));
     }
-    if (style > 3.5) {
+    if (sid() == 7) {
+        // matrix rain: each column of glyphs has drops falling from the
+        // north, a bright head churning through glyphs and a fading trail
+        vec2 id, f, c;
+        float rowsN = rings * 1.7;
+        cells(lat, lon, rowsN, id, f, c);
+        float y = rowsN * 0.5 - id.y;                         // rows down from the top
+        float b = 0.0, headness = 0.0;
+        for (int k = 0; k < 3; k++) {
+            float kk = float(k);
+            float speed = 4.0 + 9.0 * hash(vec2(id.x, 3.0 + kk));
+            float span = rowsN * 1.3;
+            float head = mod(time * speed + hash(vec2(id.x, 7.0 + kk)) * span, span);
+            float dist = head - y;
+            float len = 10.0 + 22.0 * hash(vec2(id.x, 11.0 + kk));
+            if (dist >= 0.0) {
+                b = max(b, exp(-dist / len * 1.8));
+                headness = max(headness, 1.0 - step(1.0, dist));
+            }
+        }
+        float rate = headness > 0.5 ? 14.0 : 0.6 + 2.0 * hash(id);
+        float k = 2.0 + floor(hash(id + floor(time * rate)) * (glyphCount - 2.0));
+        float g = glyph(k, f);
+        return g * (0.12 + b * 1.25 + headness * 1.6);
+    }
+    if (sid() == 4) {
         // holo earth: a fine lattice of dots on land, the coastlines lit, a
         // faint graticule every 15 degrees
         float l = landAt(lat, lon);
@@ -105,7 +135,7 @@ float pattern(vec3 n, bool front) {
 
     float step = PI / rings;
     float ringLat = clamp(floor(lat / step + 0.5) * step, -PI / 2.0 + step * 0.5, PI / 2.0 - step * 0.5);
-    if (style > 0.5) {
+    if (sid() == 1) {
         float dLat = abs(lat - ringLat);
         float lonStep = 2.0 * PI / (rings * 2.0);
         float dLon = abs(fract(lon / lonStep + 0.5) - 0.5) * lonStep * cos(lat);
@@ -378,13 +408,95 @@ vec4 dyson(vec2 d, float r2) {
     return vec4(col, clamp(a, 0.0, 1.0));
 }
 
+// ---------------------------------------------------------------- bestagons
+// hex tiles over the sphere: each cube face of the sphere carries a hex grid
+// (equal-angle, so they stay even), every tile bevelled with a neon seam
+// round it, coloured in an iridescent sweep of the theme; some pop out, and
+// a few loose ones drift by off the edge
+vec4 hexCell(vec2 p) {                       // (offset in the cell, cell id)
+    const vec2 s = vec2(1.0, 1.7320508);
+    vec4 hc = floor(vec4(p, p - vec2(0.5, 1.0)) / s.xyxy) + 0.5;
+    vec4 h = vec4(p - hc.xy * s, p - (hc.zw + 0.5) * s);
+    return dot(h.xy, h.xy) < dot(h.zw, h.zw) ? vec4(h.xy, hc.xy) : vec4(h.zw, hc.zw + 0.5);
+}
+float hexEdge(vec2 q) {                      // 0 at the rim, 0.5 at the centre
+    q = abs(q);
+    return 0.5 - max(dot(q, vec2(0.5, 0.8660254)), q.x);
+}
+vec3 iridescent(vec3 n, float h) {
+    float t = 0.5 + 0.5 * sin(dot(n, vec3(2.1, 1.4, -1.2)) * 1.6 + h * 1.4 + time * 0.25);
+    return mix(mix(glowColor.rgb, dotColor.rgb, t), vec3(0.85, 0.9, 1.0), 0.12 * (1.0 - t));
+}
+vec3 hexTile(vec4 hx, vec3 n, float face, out float seamOut) {
+    float e = hexEdge(hx.xy);
+    vec2 id = hx.zw + face * 37.0;
+    float h = hash(id);
+    float pop = step(0.9, h);
+    float gap = 0.045;
+    seamOut = smoothstep(gap, gap * 0.4, e);
+    float bevel = 1.0 - smoothstep(gap, gap + 0.09, e);
+    vec3 L = normalize(vec3(-0.5, 0.6, 0.62));
+    float diff = 0.3 + 0.7 * max(dot(n, L), 0.0);
+    vec2 dir = normalize(hx.xy + 1e-4);
+    float slope = dot(dir, vec2(-0.55, 0.75));             // bevels facing the light are bright
+    vec3 col = iridescent(n, h) * diff * (0.55 + 0.45 * hash(id + 2.0));
+    col *= 1.0 + bevel * slope * 0.7;
+    col += pop * (iridescent(n, h + 1.0) * 0.35 + 0.08);
+    float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 24.0);
+    col += spec * 0.35 * (1.0 - seamOut);
+    col = mix(col, dotColor.rgb * 0.55, seamOut);       // the neon seam
+    return col;
+}
+vec4 hexGlobe(vec2 d, float r2) {
+    float rr = sqrt(r2);
+    vec3 col = vec3(0.0);
+    float a = 0.0;
+    float k = rings * 0.13;                  // hexes across a face, about
+    if (r2 < 1.0) {
+        float z = sqrt(1.0 - r2);
+        vec3 n = vec3(d, z);
+        vec3 m = transpose(mat3(rotation)) * n;
+        vec3 am = abs(m);
+        vec2 uv;
+        float face;
+        if (am.x >= am.y && am.x >= am.z) { uv = m.yz / am.x; face = m.x > 0.0 ? 1.0 : 2.0; }
+        else if (am.y >= am.z)            { uv = m.xz / am.y; face = m.y > 0.0 ? 3.0 : 4.0; }
+        else                              { uv = m.xy / am.z; face = m.z > 0.0 ? 5.0 : 6.0; }
+        uv = atan(uv) * (4.0 / PI);          // equal-angle: even tiles out to the face edges
+        float seam;
+        col = hexTile(hexCell(uv * k), n, face, seam);
+        col += glowColor.rgb * pow(1.0 - z, 2.4) * 0.5;
+        a = 1.0;
+    }
+    // loose tiles drifting past the edge
+    if (rr > 0.98 && rr < 1.45) {
+        vec2 p = d * k * 1.6 + vec2(time * 0.05, 0.0);
+        vec4 hx = hexCell(p);
+        float h = hash(hx.zw + 91.0);
+        float keep = step(h, 0.5 * (1.0 - smoothstep(1.0, 1.45, rr))) * step(0.5, hash(hx.zw + floor(time * 0.15 + h * 5.0)));
+        float e = hexEdge(hx.xy * 1.35);
+        if (keep > 0.5 && e > 0.0 && rr > 1.0) {
+            float seam;
+            vec3 tn = normalize(vec3(d * 0.6, 0.6));
+            vec3 c = hexTile(vec4(hx.xy * 1.35, hx.zw), tn, 9.0, seam);
+            float ta = smoothstep(0.0, 0.02, e) * (1.0 - smoothstep(1.2, 1.45, rr));
+            col = mix(col, c, ta);
+            a = max(a, ta);
+        }
+    }
+    float halo = exp(-max(rr - 1.0, 0.0) * 9.0) * smoothstep(0.92, 1.0, rr);
+    col += glowColor.rgb * halo * 0.3;
+    a = max(a, halo * 0.3);
+    return vec4(col, a);
+}
+
 void main() {
     vec2 px = qt_TexCoord0 * resolution;
     vec2 d = (px - center) / radius;
     d.y = -d.y;
     float r2 = dot(d, d);
-    if (style > 4.5) {
-        vec4 o = style < 5.5 ? unicron(d, r2) : dyson(d, r2);
+    if (sid() == 5 || sid() == 6 || sid() == 8) {
+        vec4 o = sid() == 5 ? unicron(d, r2) : sid() == 6 ? dyson(d, r2) : hexGlobe(d, r2);
         fragColor = vec4(o.rgb, o.a) * qt_Opacity;
         return;
     }
@@ -396,15 +508,15 @@ void main() {
         float back = pattern(vec3(d, -z), false);
         float rim = pow(1.0 - z, 2.2);
         float light = 0.45 + 0.55 * z;                               // brighter facing you
-        float backLevel = style > 3.5 ? 0.3 : style > 1.5 ? 0.1 : 0.16;
+        float backLevel = sid() == 4 ? 0.3 : sid() >= 2 ? 0.1 : 0.16;
         col = dotColor.rgb * front * light * (1.0 + 0.6 * pulse)
             + dotColor.rgb * back * backLevel
             + glowColor.rgb * rim * 0.55;
         a = clamp(front * 0.9 + back * backLevel * 1.2 + rim * 0.5 + 0.06, 0.0, 1.0);
-        float body = style > 3.5 ? 0.16 : style > 1.5 && style < 2.5 ? 0.12 : 0.05;
+        float body = sid() == 4 ? 0.16 : sid() == 2 ? 0.12 : sid() == 7 ? 0.08 : 0.05;
         col += glowColor.rgb * body;                                 // a faint body
         a = max(a, body * 1.5);
-        if (style > 1.5) {
+        if (sid() >= 2) {
             // a soft highlight, upper left
             float spec = pow(max(dot(vec3(d, z), normalize(vec3(-0.45, 0.5, 0.75))), 0.0), 14.0);
             col += mix(dotColor.rgb, vec3(1.0), 0.5) * spec * 0.25;
@@ -415,7 +527,7 @@ void main() {
     col += glowColor.rgb * halo * 0.55;
     a = max(a, halo * 0.55);
 
-    if (style > 1.5 && style < 2.5 && rr > 0.97) {
+    if (sid() == 2 && rr > 0.97) {
         // binary: light rays fanning out from the rim
         float ang = atan(d.y, d.x);
         float s = ang * 70.0 + time * 0.08;
@@ -424,7 +536,7 @@ void main() {
         col += mix(glowColor.rgb, dotColor.rgb, 0.5) * ray * 0.9;
         a = max(a, ray * 0.8);
     }
-    if (style > 2.5 && style < 3.5 && rr > 1.02) {
+    if (sid() == 3 && rr > 1.02) {
         // code earth: stray glyphs drifting in the dark around it
         vec2 cs = vec2(14.0, 22.0);
         vec2 g = (px + vec2(0.0, time * 12.0)) / cs;
@@ -435,7 +547,7 @@ void main() {
         col += dotColor.rgb * v;
         a = max(a, v);
     }
-    if (style > 3.5) {
+    if (sid() == 4) {
         // holo earth: three orbits, slowly precessing
         float t = time * 0.05;
         float o = orbit(d, vec3(0.25 + 0.1 * sin(t), 1.0, 0.35), 1.28, 0.35, r2)

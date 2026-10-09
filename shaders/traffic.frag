@@ -3,6 +3,9 @@
 // edges to the globe as packets of light, uploads stream out of it; how many
 // lanes run, and how fast, follows the throughput. Static crackles over the
 // screen with it, and bits (0 / 1) flick past along the busiest lanes.
+// mode 1, orbits: the traffic as orbital rings round the globe instead -
+// more rings the busier it is (downloads in one colour, uploads the other),
+// packets riding them, faster with the rate, hidden behind the globe.
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 layout(std140, binding = 0) uniform buf {
@@ -17,6 +20,7 @@ layout(std140, binding = 0) uniform buf {
     vec4 inColor;
     vec4 outColor;
     float glyphCount;
+    float mode;       // 0 streams, 1 orbits
 };
 layout(binding = 1) uniform sampler2D glyphs;    // the globe's atlas: 0 and 1 first
 
@@ -64,11 +68,62 @@ float lanes(vec2 px, float level, float dir, float salt, out float bits) {
     return (dash * 0.55 + head * 1.2) * line * fade;
 }
 
+vec3 hash3(float n) { return fract(sin(vec3(n, n + 1.3, n + 2.7) * vec3(127.1, 311.7, 74.7)) * 43758.5453); }
+
+// ring k of one direction: a tilted circle round the globe with packets
+// running along it. Returns brightness at d (in globe radii).
+float ring(vec2 d, float r2, float k, float level, float dir, float salt) {
+    vec3 h = hash3(k * 7.0 + salt);
+    vec3 nrm = normalize(vec3(h.x - 0.5, 1.0 + h.y, h.z - 0.5) * vec3(1.6, 1.0, 1.6));
+    float R = 1.14 + 0.1 * k + 0.05 * h.z;
+    vec3 u = normalize(cross(nrm, abs(nrm.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+    vec3 v = cross(nrm, u);
+    mat2 M = mat2(u.xy * R, v.xy * R);
+    if (abs(determinant(M)) < 1e-4) return 0.0;
+    mat2 Mi = inverse(M);
+    vec2 w = Mi * d;
+    float lw = length(w);
+    vec2 grad = transpose(Mi) * (w / max(lw, 1e-4));
+    float dist = abs(lw - 1.0) / max(length(grad), 1e-4);
+    float th = atan(w.y, w.x);
+    vec3 p = R * (cos(th) * u + sin(th) * v);
+    float hidden = (p.z < 0.0 && r2 < 1.0) ? 0.1 : 1.0;
+    float line = smoothstep(0.006, 0.0, dist) * 0.5 + exp(-dist * 80.0) * 0.25;
+    // packets: dashes running round it, more and faster with the rate
+    float count = floor(4.0 + level * 22.0);
+    float speed = (0.15 + level * 0.9) * dir * (0.8 + 0.4 * h.x);
+    float f = fract(th / (2.0 * PI) * count - time * speed * count * 0.15 + h.y);
+    float dash = smoothstep(0.35, 0.0, f) * smoothstep(0.011, 0.0, dist);
+    float head = smoothstep(0.06, 0.0, f) * smoothstep(0.016, 0.0, dist);
+    return (line + dash * 1.1 + head * 1.6) * hidden;
+}
+
+float orbits(vec2 d, float r2, float level, float dir, float salt) {
+    if (level < 0.01) return 0.0;
+    float n = 1.0 + floor(level * 3.99);               // 1..4 rings
+    float v = 0.0;
+    for (int k = 0; k < 4; k++) {
+        float kk = float(k);
+        if (kk >= n) break;
+        float fade = clamp(level * 4.0 - kk, 0.0, 1.0);
+        v += ring(d, r2, kk * 2.0 + (dir > 0.0 ? 1.0 : 0.0), level, dir, salt) * fade;
+    }
+    return v;
+}
+
 void main() {
     vec2 px = qt_TexCoord0 * resolution;
-    float bi, bo;
-    float i = lanes(px, down, -1.0, 0.0, bi);
-    float o = lanes(px, up, 1.0, 50.0, bo);
+    float i, o, bi = 0.0, bo = 0.0;
+    if (mode > 0.5) {
+        vec2 d = (px - center) / radius;
+        d.y = -d.y;
+        float r2 = dot(d, d);
+        i = orbits(d, r2, down, 1.0, 0.0);
+        o = orbits(d, r2, up, -1.0, 40.0);
+    } else {
+        i = lanes(px, down, -1.0, 0.0, bi);
+        o = lanes(px, up, 1.0, 50.0, bo);
+    }
     vec3 col = inColor.rgb * (i + bi) + outColor.rgb * (o + bo);
     float a = clamp(i + o + bi + bo, 0.0, 1.0);
     // static: specks crackling across the screen, more with more traffic
