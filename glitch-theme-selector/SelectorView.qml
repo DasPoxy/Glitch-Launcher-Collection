@@ -234,14 +234,49 @@ FocusScope {
             // glitching out: only now that the theme is fully on, after a
             // beat for the background's fade, so the desktop shows it
             if (thenClose) { thenClose = false; outAfterApply.restart() }
+            if (code === 0) view.linkDesktopLook(applier.applied)
         }
         property string name: ""
+        property var applied: null
+    }
+
+    // With Glitch-Background-Selector installed, the monitor's look goes to
+    // the desktop with the theme: its desktop look becomes Live in this look
+    // (or off, for clean), in the new theme's colours. Without it, the looks
+    // are just this selector's.
+    readonly property string bgSettings: Quickshell.env("HOME") + "/.config/glitch-background-selector/settings.json"
+    property bool bgSelectorInstalled: false
+    Process {
+        id: bgProbe
+        command: ["test", "-f", Quickshell.env("HOME") + "/.config/omarchy/plugins/glitch-background-selector/manifest.json"]
+        onExited: (code) => view.bgSelectorInstalled = code === 0
+    }
+    Process { id: bgWriter }
+    function linkDesktopLook(t) {
+        if (!bgSelectorInstalled || settings.linkDesktop === false || !t) return
+        const look = ["clean", "grid", "glyph", "rain"].indexOf(settings.look) >= 0 ? settings.look : "clean"
+        const cols = [colorOf(t, "accent", "blue", "cyan", "foreground") || "#3dff8a",
+                      colorOf(t, "magenta", "bright_magenta", "cyan", "accent") || "#11c46a",
+                      colorOf(t, "darker_background", "dark_background", "background") || "#010603"]
+        // merge into its settings (atomic: it watches the file and follows at once)
+        bgWriter.command = ["python3", "-c",
+            "import json,os,sys\n" +
+            "p,look,cols=sys.argv[1],sys.argv[2],sys.argv[3:6]\n" +
+            "try: s=json.load(open(p))\n" +
+            "except Exception: s={}\n" +
+            "s.update(look=look, desktopLook='off' if look=='clean' else 'live', desktopColors=cols)\n" +
+            "os.makedirs(os.path.dirname(p),exist_ok=True)\n" +
+            "t=p+'.tmp'; open(t,'w').write(json.dumps(s,indent=2)+'\\n'); os.replace(t,p)",
+            bgSettings, look, cols[0], cols[1], cols[2]]
+        bgWriter.running = true
+        terminal.push(look === "clean" ? "> desktop look :: off" : "> desktop look :: " + look + " (live)")
     }
     function apply(t) {
         if (!t) return
         if (t.current) { terminal.push("> already running :: " + t.name); fireGlitch("tear", 0.4 * glitchLevel); return }
         if (applier.running) return
         applier.name = t.name
+        applier.applied = t
         applier.thenClose = settings.afterApply === "close"
         applier.command = ["omarchy-theme-set", t.name]
         applier.running = true
@@ -382,6 +417,7 @@ FocusScope {
 
     // fresh each time it opens
     onActiveChanged: if (active) {
+        bgProbe.running = true                   // is Glitch-Background-Selector here?
         query = ""
         filtering = false
         settingsOpen = false
@@ -1077,6 +1113,12 @@ FocusScope {
                     }
                 }
                 Chip { label: "CRT monitor"; on: view.settings.crt !== false; onClicked: view.setSetting("crt", view.settings.crt === false) }
+                Chip {
+                    visible: view.bgSelectorInstalled
+                    label: "Desktop look follows"
+                    on: view.settings.linkDesktop !== false
+                    onClicked: view.setSetting("linkDesktop", view.settings.linkDesktop === false)
+                }
             }
 
             Heading { text: "GLITCHES" }
