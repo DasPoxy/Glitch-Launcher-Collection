@@ -183,6 +183,8 @@ def look_glyph(im, prim, glow, back, rain=False):
 
 
 def apply_look(im, look, colours):
+    if look not in ("grid", "glyph", "rain") or len(colours) < 3:
+        return im
     prim, glow, back = (hexrgb(x) for x in colours)
     if look == "grid":
         return look_grid(im, prim, glow, back)
