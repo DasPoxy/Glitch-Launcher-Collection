@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "globe-launcher",
+  "name": "Globe-Launcher",
+  "version": "0.1.0",
+  "author": "DasPoxy",
+  "license": "MIT",
+  "description": "A full-screen app launcher: your apps projected out from a spinning dot-globe over a starfield, with a jacked-in terminal feel. Spin it, type to filter, Enter to launch.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "GlobeLauncher.qml"
+  }
+}
