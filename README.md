@@ -13,7 +13,8 @@ of being jacked into a terminal.
   planet-eater of raised, bevelled, riveted plates engraved with circuitry,
   torn open in three ragged wounds that crumble into glowing machinery and
   shed tumbling debris; a cratered cap with a trench across it, a belt with antennae,
-  a glowing eye-vent, a horned mouth firing a beam as it turns, a ring of
+  a glowing eye-vent, a mouth firing a beam as it turns, between two great segmented jaws
+  that curve out past the rim and hook round the beam, a ring of
   lights round it) or a **dyson sphere** (a lattice shell round a star, its light
   escaping through the gaps), **matrix rain** (code falling down the sphere in
   columns) or **bestagon** (a Goldberg sphere of whole glass hex tiles - and the

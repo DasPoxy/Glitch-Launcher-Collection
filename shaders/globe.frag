@@ -356,14 +356,10 @@ vec3 unicronSurface(vec3 n, out float glowAmt, out float hot) {
     col = mix(col, vec3(0.03), smoothstep(0.24, 0.21, ma));
     hot += smoothstep(0.17, 0.0, ma) * 1.6;
     glowAmt += exp(-ma * 12.0) * 0.8;
-    // two horned mandibles hooked round it, tapering to points
-    float phi = around(m, U_MOUTH);
-    float upper = smoothstep(-0.4, 0.2, phi) * smoothstep(2.4, 1.6, phi);
-    float lower = smoothstep(-2.8, -2.2, phi) * smoothstep(-0.3, -0.9, phi);
-    float taper = max(upper, lower);
-    float horn = smoothstep(0.05 * taper + 0.002, 0.0, abs(ma - 0.29 - 0.05 * (1.0 - taper))) * step(0.05, taper);
-    col = mix(col, vec3(0.30, 0.26, 0.26) * diff, horn);
-    glowAmt += horn * smoothstep(0.31, 0.27, ma) * 0.9;           // their inner edges catch the fire
+    // an armoured collar round the socket, where the jaws are rooted
+    float collar = smoothstep(0.035, 0.0, abs(ma - 0.26));
+    col = mix(col, vec3(0.30, 0.28, 0.32) * diff, collar);
+    glowAmt += smoothstep(0.012, 0.0, abs(ma - 0.235)) * 0.7;
     return col;
 }
 
@@ -412,6 +408,52 @@ vec4 unicron(vec2 d, float r2) {
                 float tip = smoothstep(0.018, 0.0, abs(rr - len)) * line;
                 col += frameCol * line * 0.8 + hotCol * tip * 0.8;
                 a = max(a, line);
+            }
+        }
+    }
+
+    // the jaws: two great horns rooted either side of the mouth, curving out
+    // and hooking forward round the beam, segmented like armour, their inner
+    // edges lit by its fire. They turn with the mouth and stand out past the
+    // rim; when the mouth is round the back they're hidden with it.
+    {
+        vec3 mv = mat3(rotation) * normalize(U_MOUTH);
+        float showJaws = smoothstep(-0.15, 0.25, mv.z);
+        if (showJaws > 0.0) {
+            vec2 M = mv.xy;
+            vec2 D = length(M) > 0.05 ? normalize(M) : vec2(0.7, -0.7);
+            vec2 P = vec2(-D.y, D.x);                         // across the beam
+            float sc = 0.55 + 0.45 * clamp(1.0 - mv.z * 0.6, 0.0, 1.0);   // longer side-on
+            for (int j = 0; j < 2; j++) {
+                float sd = j == 0 ? 1.0 : -1.0;
+                // a quadratic curve: root beside the socket, bulging out, tip hooked in
+                vec2 p0 = M + P * sd * 0.2 - D * 0.02;
+                vec2 p1 = M + D * 0.22 * sc + P * sd * 0.5 * sc;
+                vec2 p2 = M + D * 0.52 * sc + P * sd * 0.07;
+                float best = 1e9, bt = 0.0, bside = 0.0;
+                for (int i = 0; i <= 28; i++) {
+                    float t = float(i) / 28.0;
+                    vec2 c = mix(mix(p0, p1, t), mix(p1, p2, t), t);
+                    float dd = length(d - c);
+                    if (dd < best) {
+                        best = dd; bt = t;
+                        vec2 tan2 = normalize(mix(p1 - p0, p2 - p1, t));
+                        bside = dot(d - c, vec2(-tan2.y, tan2.x)) * sd;
+                    }
+                }
+                float w = mix(0.075, 0.006, pow(bt, 0.85)) * (0.8 + 0.2 * sc);
+                float body = 1.0 - smoothstep(w - 0.004, w + 0.002, best);
+                if (body <= 0.0) continue;
+                float across = clamp(bside / w, -1.0, 1.0);    // -1 inner edge (toward the beam) .. 1 outer
+                float seg = smoothstep(0.08, 0.0, abs(fract(bt * 9.0) - 0.5) - 0.38);   // armour bands
+                float round3 = sqrt(max(0.0, 1.0 - across * across));
+                vec3 metal = mix(vec3(0.20, 0.19, 0.24), vec3(0.42, 0.40, 0.46), 0.5 + 0.5 * across) * (0.45 + 0.75 * round3);
+                metal *= 1.0 - seg * 0.45;
+                float innerFire = smoothstep(-0.2, -0.9, across) * (1.0 - bt * 0.4);
+                vec3 jc = metal + dotColor.rgb * innerFire * 0.9 + hotCol * innerFire * smoothstep(0.6, 0.0, bt) * 0.4;
+                jc += dotColor.rgb * smoothstep(0.06, 0.0, abs(across - 0.85)) * 0.25;     // a lit outer ridge
+                col = mix(col, jc, body * showJaws);
+                a = max(a, body * showJaws);
             }
         }
     }
