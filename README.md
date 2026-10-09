@@ -15,9 +15,17 @@ of being jacked into a terminal.
 - **Atmosphere**: a full-resolution starfield, and now and then a glitch -
   the screen tears and shakes, colours split, and a terminal in the corner
   types a line.
+- **Space traffic**: shooting stars streak past, a comet now and then, and
+  spacecraft (fighters, freighters, satellites, sometimes a formation)
+  cross the sky in the distance.
+- **`>` Omarchy commands**: type `>` to search `omarchy commands`. Enter runs
+  the selected one (Shift+Enter runs it in a floating terminal); a command
+  that needs arguments fills the prompt first so you can type them.
+- **`/` files**: type `/` to fuzzy-find files in your home, `~/.config` and
+  `~/.local/bin` (`fd` + `fzf`). Enter opens the file, Shift+Enter its folder.
 - **Options** (Ctrl+, or the button top right): colours from your Omarchy
   theme, a prebuilt theme (Matrix, Cyber, Ice, Amber, Mono) or your own,
-  dots or wireframe, auto-spin, and glitches normal / subtle / off. Saved in
+  dots or wireframe, auto-spin, space traffic, and glitches normal / subtle / off. Saved in
   `~/.config/globe-launcher/settings.json`.
 
 Clicking the selected app (or Enter) launches it and closes the launcher;
