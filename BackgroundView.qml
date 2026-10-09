@@ -23,7 +23,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/glitch-background-selector/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/glitch-background-selector/settings.json"
-    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true,
+    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true, afterApply: "stay",
                               folder: "~/Pictures/Wallpapers" })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
@@ -292,7 +292,10 @@ FocusScope {
             stutter.left = 2; stutter.restart()                  // and it keeps fighting it
         }
         terminal.scrawl(["> repainting the backdrop :: " + b.name])
+        if (settings.afterApply === "close") outAfterApply.restart()
     }
+    // options: after applying, glitch out to the desktop to watch it land
+    Timer { id: outAfterApply; interval: 260; onTriggered: if (view.closeRequest) view.closeRequest() }
 
     // ------------------------------------------------------------------ time
     property real t: 0
@@ -1089,6 +1092,14 @@ FocusScope {
                 Chip { label: "Subtle"; on: view.settings.glitch === "subtle"; onClicked: view.setSetting("glitch", "subtle") }
                 Chip { label: "Off"; on: view.settings.glitch === "off"; onClicked: view.setSetting("glitch", "off") }
                 Chip { label: "Open/close glitch"; on: view.settings.openGlitch !== false; onClicked: view.setSetting("openGlitch", view.settings.openGlitch === false) }
+            }
+            Heading { text: "AFTER APPLYING" }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Chip { label: "Stay open"; on: view.settings.afterApply !== "close"; onClicked: view.setSetting("afterApply", "stay") }
+                Chip { label: "Glitch out to desktop"; on: view.settings.afterApply === "close"; onClicked: view.setSetting("afterApply", "close") }
             }
             Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
         }

@@ -27,7 +27,8 @@ and [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
 
 **Options** (Ctrl+, or the button top right): the wallpapers folder, the
 carousel style, the monitor's look, CRT on / off, glitches normal / subtle /
-off, and the open / close glitch. Kept in
+off, the open / close glitch, and whether setting a wallpaper leaves it open
+or glitches out to the desktop. Kept in
 `~/.config/glitch-background-selector/settings.json`.
 
 ## Install
