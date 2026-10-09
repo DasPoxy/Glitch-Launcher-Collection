@@ -5,8 +5,9 @@ import Quickshell.Io
 import Quickshell.Widgets
 import qs.Commons
 
-// Globe-Launcher's scene: a starfield, the globe, your apps projected out from
-// it, and the terminal HUD - all through a glitch pass. Spin the globe (drag,
+// Globe-Launcher's scene: a starfield (with traffic), the globe, your apps -
+// or Omarchy's commands after ">", or files after "/" - projected out from it,
+// and the terminal HUD, all through a glitch pass. Spin the globe (drag,
 // arrow keys, or let it turn); whatever faces you is the selected app, which
 // bulges out with its name. Enter / a click on it launches it. Type to filter.
 FocusScope {
@@ -19,7 +20,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
-    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true,
+    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true,
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
@@ -58,27 +59,122 @@ FocusScope {
     readonly property color cText: pal.text
     readonly property string mono: Style.font.family || "monospace"
 
-    // -------------------------------------------------------------------- apps
+    // ------------------------------------------------------------------ nodes
+    // What sits on the globe, by what's typed: your apps; after ">", Omarchy's
+    // commands; after "/", files (fuzzy). Every node is {kind, name, sub,
+    // detail, icon} plus what activating it needs.
+    property string query: ""
+    readonly property string mode: query.startsWith(">") ? "cmd" : query.startsWith("/") ? "file" : "app"
+    readonly property string term: (mode === "app" ? query : query.slice(1)).trim().toLowerCase()
+
     readonly property var allApps: (DesktopEntries.applications ? DesktopEntries.applications.values : [])
         .filter(a => a && !a.noDisplay)
         .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
-    property string query: ""
-    readonly property var apps: {
-        const q = query.trim().toLowerCase()
-        if (!q) return allApps
-        return allApps.filter(a => (a.name || "").toLowerCase().includes(q) || (a.genericName || "").toLowerCase().includes(q)
-            || (a.keywords || []).some(k => k.toLowerCase().includes(q)) || (a.categories || []).some(c => c.toLowerCase().includes(q)))
+        .map(a => ({ kind: "app", name: a.name || "", sub: a.genericName || "", detail: a.comment || a.genericName || "",
+                     icon: a.icon || "", entry: a,
+                     words: [a.name, a.genericName, (a.keywords || []).join(" "), (a.categories || []).join(" ")].join(" ").toLowerCase() }))
+
+    // Omarchy's commands, read once from `omarchy commands`
+    property var commands: []
+    Process {
+        id: cmdLister
+        command: ["omarchy", "commands"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = []
+                for (const line of text.split("\n")) {
+                    const m = line.match(/^\s+omarchy\s+(.+?)\s{2,}(\S.*)$/)
+                    if (!m) continue
+                    const full = m[1].trim(), i = full.search(/\s[<\[]/)
+                    const base = i < 0 ? full : full.slice(0, i), args = i < 0 ? "" : full.slice(i + 1)
+                    out.push({ kind: "cmd", name: base, sub: args, detail: m[2].trim(), icon: "utilities-terminal",
+                               // only a <required> argument outside [optional ones] asks for typing
+                               base: base, needsArg: /<[^>]+>/.test(args.replace(/\[[^\]]*\]/g, "")),
+                               words: (base + " " + m[2]).toLowerCase(), baseLower: base.toLowerCase() })
+                }
+                view.commands = out
+            }
+        }
     }
-    // where each app sits on the globe: evenly spread (a Fibonacci sphere)
+    // after ">": the matching commands; once a whole command is typed and a
+    // space after it, just that one, with what follows as its arguments
+    readonly property var commandNodes: {
+        const t = term
+        let exact = null
+        for (const c of commands) if (t.startsWith(c.base.toLowerCase() + " ") && (!exact || c.base.length > exact.base.length)) exact = c
+        if (exact) return [Object.assign({}, exact, { typedArgs: query.slice(1).trim().slice(exact.base.length).trim() })]
+        const words = t.split(/\s+/).filter(w => w)
+        // best first: the name starts with what's typed, then has every word
+        // in it, then the rest (words only in the description)
+        const rank = c => c.baseLower.startsWith(t) ? 0 : words.every(w => c.baseLower.includes(w)) ? 1 : 2
+        return commands.filter(c => words.every(w => c.words.includes(w)))
+            .map(c => ({ c: c, r: rank(c) })).sort((a, b) => a.r - b.r || a.c.base.length - b.c.base.length)
+            .map(x => x.c).slice(0, 160)
+    }
+
+    // files: an index of your home (fd) when "/" is typed, then fzf picks
+    readonly property string fileIndex: Quickshell.env("HOME") + "/.cache/globe-launcher/files.txt"
+    property var files: []
+    Process {
+        id: fileIndexer
+        // your own files (not hidden ones: those are mostly toolchains and app
+        // data), your configs (minus caches), and your scripts
+        command: ["bash", "-c",
+            "mkdir -p \"${1%/*}\"; { " +
+            "fd --type f --exclude Games --exclude node_modules --exclude '*.pyc' . \"$HOME\"; " +
+            "fd --type f --hidden --exclude '*[Cc]ache*' --exclude IndexedDB --exclude 'Local Storage' --exclude 'Service Worker' " +
+            "--exclude blob_storage --exclude Crashpad --exclude .git . \"$HOME/.config\" \"$HOME/.local/bin\"; " +
+            "} > \"$1.tmp\" 2>/dev/null; mv \"$1.tmp\" \"$1\"", "_", view.fileIndex]
+        onExited: view.fileSearch()
+    }
+    Process {
+        id: fileFinder
+        stdout: StdioCollector {
+            onStreamFinished: view.files = text.split("\n").filter(l => l).map(p => view.fileNode(p))
+        }
+    }
+    Timer { id: fileDebounce; interval: 120; onTriggered: view.fileSearch() }
+    function fileSearch() {
+        if (fileIndexer.running) return
+        if (!term) { files = []; return }
+        fileFinder.running = false
+        fileFinder.command = ["bash", "-c", "fzf --filter \"$1\" < \"$2\" | head -n 90", "_", term, fileIndex]
+        fileFinder.running = true
+    }
+    function fileIcon(name) {
+        const e = name.split(".").pop().toLowerCase()
+        if (["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "avif"].includes(e)) return "image-x-generic"
+        if (["mp4", "mkv", "webm", "mov", "avi", "m4v"].includes(e)) return "video-x-generic"
+        if (["mp3", "flac", "ogg", "wav", "m4a", "opus"].includes(e)) return "audio-x-generic"
+        if (e === "pdf") return "application-pdf"
+        if (["zip", "tar", "gz", "xz", "7z", "rar", "zst", "bz2"].includes(e)) return "package-x-generic"
+        if (["sh", "py", "js", "ts", "qml", "lua", "c", "cpp", "h", "rs", "go", "rb"].includes(e)) return "text-x-script"
+        return "text-x-generic"
+    }
+    function fileNode(p) {
+        const home = Quickshell.env("HOME"), cut = p.lastIndexOf("/")
+        const dir = p.slice(0, cut), shown = dir.startsWith(home) ? "~" + dir.slice(home.length) : dir
+        return { kind: "file", name: p.slice(cut + 1), sub: shown, detail: (shown + "/" + p.slice(cut + 1)), icon: fileIcon(p), path: p }
+    }
+    onModeChanged: {
+        if (mode === "cmd" && commands.length === 0 && !cmdLister.running) cmdLister.running = true
+        if (mode === "file" && !fileIndexer.running) fileIndexer.running = true      // fresh each time
+    }
+    onTermChanged: if (mode === "file") fileDebounce.restart()
+
+    readonly property var nodes: mode === "cmd" ? commandNodes
+        : mode === "file" ? files
+        : (term ? allApps.filter(a => a.words.includes(term)) : allApps)
+    // where each node sits on the globe: evenly spread (a Fibonacci sphere)
     readonly property var points: {
-        const n = apps.length, out = [], golden = Math.PI * (3 - Math.sqrt(5))
+        const n = nodes.length, out = [], golden = Math.PI * (3 - Math.sqrt(5))
         for (let i = 0; i < n; i++) {
             const y = n === 1 ? 0 : 1 - 2 * (i + 0.5) / n, r = Math.sqrt(Math.max(0, 1 - y * y)), phi = i * golden
             out.push([Math.cos(phi) * r, y, Math.sin(phi) * r])
         }
         return out
     }
-    onAppsChanged: aimAt(0)
+    onNodesChanged: aimAt(0)
 
     // --------------------------------------------------------- the globe's turn
     // rot: 3x3 rotation, row-major (model -> view). x right, y up, z toward you.
@@ -117,7 +213,7 @@ FocusScope {
     property bool dragging: false
     property int aim: -1         // the app being turned to the front
     property real idle: 0        // seconds since the last touch
-    function aimAt(i) { aim = (i >= 0 && i < apps.length) ? i : -1; idle = 0 }
+    function aimAt(i) { aim = (i >= 0 && i < nodes.length) ? i : -1; idle = 0 }
 
     // ------------------------------------------------------------- projection
     property real zoom: 1.0
@@ -129,7 +225,7 @@ FocusScope {
     property var proj: []                        // per app: {x, y, sx, sy, z}
     property int selected: -1
     function project() {
-        const out = [], n = apps.length
+        const out = [], n = nodes.length
         let best = -1, bestZ = -2
         for (let i = 0; i < n; i++) {
             const q = apply(points[i])
@@ -170,10 +266,22 @@ FocusScope {
     }
 
     // ------------------------------------------------------- keyboard and mouse
-    function launch(i) {
-        const a = apps[i]
-        if (!a) return
-        a.execute()
+    // Enter / a click on the selected node. alt (Shift+Enter): a file's
+    // folder; a command in a terminal, to see its output.
+    function activate(i, alt) {
+        const n = nodes[i]
+        if (!n) return
+        if (n.kind === "app") { n.entry.execute(); launched(); return }
+        if (n.kind === "file") {
+            Quickshell.execDetached(["xdg-open", alt ? n.path.slice(0, n.path.lastIndexOf("/")) : n.path])
+            launched()
+            return
+        }
+        // a command that needs arguments: type them first
+        const args = n.typedArgs || ""
+        if (n.needsArg && !args) { query = "> " + n.base + " "; return }
+        const line = "omarchy " + n.base + (args ? " " + args : "")
+        Quickshell.execDetached(alt ? ["omarchy-launch-floating-terminal-with-presentation", line] : ["bash", "-lc", line])
         launched()
     }
     // arrow keys: the nearest app that way, on screen; none -> just turn
@@ -202,7 +310,7 @@ FocusScope {
             return
         }
         if (k === Qt.Key_Escape) { if (query) query = ""; else if (closeRequest) closeRequest() }
-        else if (k === Qt.Key_Return || k === Qt.Key_Enter) launch(selected)
+        else if (k === Qt.Key_Return || k === Qt.Key_Enter) activate(selected, !!(event.modifiers & Qt.ShiftModifier))
         else if (k === Qt.Key_Left) hop(-1, 0)
         else if (k === Qt.Key_Right) hop(1, 0)
         else if (k === Qt.Key_Up) hop(0, -1)
@@ -277,6 +385,15 @@ FocusScope {
             fragmentShader: Qt.resolvedUrl("shaders/stars.frag.qsb")
         }
 
+        // shooting stars, comets and spacecraft, behind the globe
+        SpaceTraffic {
+            anchors.fill: parent
+            running: view.active && view.settings.traffic !== false
+            visible: view.settings.traffic !== false
+            primary: view.cPrimary
+            dark: view.cBg
+        }
+
         ShaderEffect {
             anchors.fill: parent
             property real time: view.driftT
@@ -294,7 +411,7 @@ FocusScope {
 
         // the apps, projected out from the globe on beams
         Repeater {
-            model: view.apps
+            model: view.nodes
             delegate: Item {
                 id: node
                 required property var modelData
@@ -350,7 +467,7 @@ FocusScope {
                         anchors.fill: parent
                         anchors.margins: -6
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: node.sel ? view.launch(node.index) : view.aimAt(node.index)
+                        onClicked: node.sel ? view.activate(node.index, false) : view.aimAt(node.index)
                     }
                 }
 
@@ -378,7 +495,7 @@ FocusScope {
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             Text { text: node.modelData.name || ""; color: view.cText; font.family: view.mono; font.pixelSize: 15; font.bold: true }
-                            Text { visible: text !== ""; text: node.modelData.genericName || ""; color: view.cPrimary; opacity: 0.75; font.family: view.mono; font.pixelSize: 11 }
+                            Text { visible: text !== ""; text: node.modelData.sub || ""; color: view.cPrimary; opacity: 0.75; font.family: view.mono; font.pixelSize: 11 }
                         }
                     }
                 }
@@ -393,13 +510,15 @@ FocusScope {
             spacing: 6
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "// GLOBE-LAUNCHER  ·  " + view.apps.length + " NODES" + (view.query ? "  ·  FILTER ACTIVE" : "")
+                text: "// GLOBE-LAUNCHER  ·  " + view.nodes.length + (view.mode === "cmd" ? " OMARCHY COMMANDS" : view.mode === "file" ? " FILES" : " APPS")
+                      + (view.term ? "  ·  FILTER ACTIVE" : "")
                 color: view.cPrimary; opacity: 0.7
                 font.family: view.mono; font.pixelSize: 13; font.letterSpacing: 2
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "> " + (view.query || "type to search") + (cursorBlink.on ? "_" : " ")
+                text: (!view.query ? "> type to search   ·   > commands   ·   / files"
+                       : view.mode === "app" ? "> " + view.query : view.query) + (cursorBlink.on ? "_" : " ")
                 color: view.query ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
                 font.family: view.mono; font.pixelSize: 22
                 Timer { id: cursorBlink; property bool on: true; interval: 530; repeat: true; running: view.active; onTriggered: on = !on }
@@ -409,7 +528,7 @@ FocusScope {
         // bottom: the selected app, big
         Rectangle {
             id: card
-            readonly property var app: view.apps[view.selected] || null
+            readonly property var app: view.nodes[view.selected] || null
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 54
@@ -432,16 +551,30 @@ FocusScope {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 2
-                    Text { Layout.fillWidth: true; elide: Text.ElideRight; text: card.app ? (card.app.name || "").toUpperCase() : ""; color: view.cText; font.family: view.mono; font.pixelSize: 20; font.bold: true; font.letterSpacing: 1.5 }
-                    Text { Layout.fillWidth: true; elide: Text.ElideRight; visible: text !== ""; text: card.app ? (card.app.comment || card.app.genericName || "") : ""; color: view.cPrimary; opacity: 0.85; font.family: view.mono; font.pixelSize: 13 }
-                    Text { Layout.fillWidth: true; text: "[ENTER] launch   [← → ↑ ↓] hop   [drag] spin   [type] search   [CTRL+,] options   [ESC] exit"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
+                    Text {
+                        Layout.fillWidth: true; elide: Text.ElideRight
+                        text: !card.app ? "" : card.app.kind === "cmd" ? "omarchy " + card.app.base + " " + (card.app.typedArgs || card.app.sub) : (card.app.name || "").toUpperCase()
+                        color: view.cText; font.family: view.mono; font.pixelSize: 20; font.bold: true; font.letterSpacing: 1.5
+                    }
+                    Text { Layout.fillWidth: true; elide: Text.ElideMiddle; visible: text !== ""; text: card.app ? (card.app.detail || "") : ""; color: view.cPrimary; opacity: 0.85; font.family: view.mono; font.pixelSize: 13 }
+                    Text {
+                        Layout.fillWidth: true; elide: Text.ElideRight
+                        text: !card.app ? ""
+                            : card.app.kind === "file" ? "[ENTER] open   [SHIFT+ENTER] open its folder   [← → ↑ ↓] hop   [ESC] back"
+                            : card.app.kind === "cmd" ? (card.app.needsArg && !card.app.typedArgs ? "[ENTER] type its arguments: " + card.app.sub + "   [ESC] back"
+                                                         : "[ENTER] run   [SHIFT+ENTER] run in a terminal   [← → ↑ ↓] hop   [ESC] back")
+                            : "[ENTER] launch   [← → ↑ ↓] hop   [drag] spin   [type] search   [>] commands   [/] files   [CTRL+,] options   [ESC] exit"
+                        color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11
+                    }
                 }
             }
         }
         Text {
             anchors.centerIn: parent
-            visible: view.apps.length === 0
-            text: view.allApps.length === 0 ? "> scanning apps..." : "> no node matches \"" + view.query + "\""
+            visible: view.nodes.length === 0
+            text: view.mode === "cmd" ? (view.commands.length === 0 ? "> reading omarchy commands..." : "> no command matches \"" + view.term + "\"")
+                : view.mode === "file" ? (fileIndexer.running ? "> indexing your files..." : !view.term ? "> type a file name" : "> no file matches \"" + view.term + "\"")
+                : view.allApps.length === 0 ? "> scanning apps..." : "> no app matches \"" + view.term + "\""
             color: view.cText; font.family: view.mono; font.pixelSize: 18
         }
 
@@ -633,6 +766,7 @@ FocusScope {
                 Chip { label: "Dots"; on: view.settings.style !== "wire"; onClicked: view.setSetting("style", "dots") }
                 Chip { label: "Wireframe"; on: view.settings.style === "wire"; onClicked: view.setSetting("style", "wire") }
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
+                Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
             }
 
             Heading { text: "GLITCHES" }
