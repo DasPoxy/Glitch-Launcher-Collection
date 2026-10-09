@@ -8,7 +8,8 @@ and [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
   (yours for it in `~/.config/omarchy/backgrounds/<theme>`, then its own)
   come first, together, marked with a bar; then every image in your
   wallpapers folder (set in the options, a few levels deep). **T** jumps to
-  the start of the theme's, **W** to your folder's.
+  the start of the theme's, **W** to your folder's, **R** to a random one
+  (**Shift+R** sets a random one straight away).
 - **The monitor**: the highlighted wallpaper on a glowing CRT set,
   materialising as you move to it - plain, or through a grid, glyph or code
   rain look (Tab).

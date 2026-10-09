@@ -100,6 +100,17 @@ FocusScope {
         else terminal.push(section === "theme" ? "> the theme has no wallpapers" : "> nothing in your folder")
     }
 
+    // r: a random one (never the highlighted one again); Shift+R sets it too
+    function randomPick(andSet) {
+        if (shown.length < 2) return
+        let i = sel
+        while (i === sel) i = Math.floor(Math.random() * shown.length)
+        terminal.push("> random frame :: " + shown[i].name)
+        sel = i
+        if (glitchLevel > 0) fireGlitch(["blocks", "tear", "vhs"][Math.floor(Math.random() * 3)], 0.5 * glitchLevel)
+        if (andSet) apply(shown[i])
+    }
+
     // the highlighted wallpaper's palette (palette.py), read once it settles
     property var palette: ({ w: 0, h: 0, colors: [] })
     Timer { id: paletteSettle; interval: 120; onTriggered: { paletteReader.running = false; if (view.cur) { paletteReader.command = ["python3", Qt.resolvedUrl("palette.py").toString().replace(/^file:\/\//, ""), view.cur.path]; paletteReader.running = true } } }
@@ -430,6 +441,7 @@ FocusScope {
         else if (k === Qt.Key_Slash && !ctrl) { filtering = true; query = "" }
         else if (k === Qt.Key_T && !ctrl) jumpTo("theme")
         else if (k === Qt.Key_W && !ctrl) jumpTo("folder")
+        else if (k === Qt.Key_R && !ctrl) randomPick(!!(event.modifiers & Qt.ShiftModifier))
         else if (k === Qt.Key_Comma && ctrl) settingsOpen = true
         else if (k === Qt.Key_Left) step(-1)
         else if (k === Qt.Key_Right) step(1)
@@ -508,7 +520,7 @@ FocusScope {
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: (view.filtering ? "/" + view.query : "> [/] filter   [T] theme   [W] your folder") + (cursorBlink.on ? "_" : " ")
+                text: (view.filtering ? "/" + view.query : "> [/] filter   [T] theme   [W] your folder   [R] random") + (cursorBlink.on ? "_" : " ")
                 color: view.filtering ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
                 font.family: view.mono; font.pixelSize: 22
                 Timer { id: cursorBlink; property bool on: true; interval: 530; repeat: true; running: view.active; onTriggered: on = !on }
@@ -867,7 +879,7 @@ FocusScope {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
-            text: "[← →] browse   [T] theme   [W] folder   [ENTER] set   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
+            text: "[← →] browse   [T] theme   [W] folder   [R] random   [ENTER] set   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
             color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 12
         }
 
