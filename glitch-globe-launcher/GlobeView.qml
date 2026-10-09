@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
 import qs.Commons
+import "eggs.js" as Eggs
 
 // Glitch-Globe-Launcher's scene: a starfield (with traffic), the globe, your apps -
 // or Omarchy's commands after ">", or files after "/" - projected out from it,
@@ -1206,7 +1207,10 @@ FocusScope {
                 "> signal drift detected, recalibrating", "> uplink %n%% :: carrier stable", "> decrypting index 0x%h",
                 "> wake up, operator", "> follow the white rabbit", "> mapping %n nodes to the sphere", "> packet loss 0.%n%"]
             function say() {
-                if (queue.length) return                 // don't talk over a readout
+                if (queue.length) return
+                // now and then, an easter egg instead (eggs.js)
+                const egg = Eggs.maybe(0.3)
+                if (egg) { push(egg); return }                 // don't talk over a readout
                 let s = phrases[Math.floor(Math.random() * phrases.length)]
                 s = s.replace("%h", Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")).replace("%n", Math.floor(Math.random() * 99))
                 push(s)

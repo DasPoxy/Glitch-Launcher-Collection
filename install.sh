@@ -43,6 +43,8 @@ install_one() {
   [[ -f $REPO/$id/manifest.json ]] || die "missing $id/manifest.json"
   mkdir -p "$PLUGINS/$id"
   rsync -a --delete --exclude .git "$REPO/$id/" "$PLUGINS/$id/"
+  # the shared easter eggs (eggs.js at the top is the one to edit)
+  [[ -f $REPO/eggs.js ]] && cp "$REPO/eggs.js" "$PLUGINS/$id/eggs.js"
   echo "installed $id"
 }
 

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "eggs.js" as Eggs
 
 // Glitch-Theme-Selector's scene: every Omarchy theme on a cover-flow arc under
 // an old CRT monitor showing the highlighted one's preview, its full palette
@@ -910,6 +911,9 @@ FocusScope {
                 "> palette checksum 0x%h", "> wake up, operator", "> signal %n% :: holding", "> follow the white rabbit"]
             function say() {
                 if (queue.length) return
+                // now and then, an easter egg instead (eggs.js)
+                const egg = Eggs.maybe(0.3)
+                if (egg) { push(egg); return }
                 let s = phrases[Math.floor(Math.random() * phrases.length)]
                 s = s.replace("%h", Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")).replace("%n", Math.floor(Math.random() * 99))
                 push(s)
