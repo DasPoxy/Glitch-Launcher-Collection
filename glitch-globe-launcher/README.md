@@ -74,21 +74,13 @@ clicking another app turns the globe to it.
 
 ## Install
 
-```sh
-omarchy plugin add https://github.com/DasPoxy/glitch-globe-launcher.git --enable
-```
-
-Open it with:
+Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
 
 ```sh
-omarchy-shell shell toggle glitch-globe-launcher '{}'
+./install.sh globe           # add --keys to bind its key too
 ```
 
-and give it a key in `~/.config/hypr/bindings.lua`, for example:
-
-```lua
-o.bind("SUPER + ALT + SPACE", "Glitch-Globe-Launcher", "omarchy-shell shell toggle glitch-globe-launcher '{}'")
-```
+Open it with `omarchy-shell shell toggle glitch-globe-launcher '{}'`.
 
 ## How it's drawn
 

@@ -1,7 +1,7 @@
 # Glitch-Theme-Selector
 
 An Omarchy theme selector with an old-monitor, matrix / cyberpunk feel - a
-sibling of [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
+sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher).
 
 - **The monitor**: the highlighted theme's preview on a glowing CRT set,
   materialising as you move to it - plain, or through a grid, glyph or code
@@ -34,21 +34,13 @@ Settings are kept in `~/.config/glitch-theme-selector/settings.json`.
 
 ## Install
 
-```sh
-omarchy plugin add https://github.com/DasPoxy/glitch-theme-selector.git --enable
-```
-
-Open it with:
+Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
 
 ```sh
-omarchy-shell shell toggle glitch-theme-selector '{}'
+./install.sh theme           # add --keys to bind its key too
 ```
 
-and give it a key in `~/.config/hypr/bindings.lua`, for example:
-
-```lua
-o.bind("SUPER + ALT + SHIFT + SPACE", "Glitch-Theme-Selector", "omarchy-shell shell toggle glitch-theme-selector '{}'")
-```
+Open it with `omarchy-shell shell toggle glitch-theme-selector '{}'`.
 
 ## How it works
 

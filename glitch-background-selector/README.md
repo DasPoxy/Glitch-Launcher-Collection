@@ -1,8 +1,8 @@
 # Glitch-Background-Selector
 
 An Omarchy wallpaper selector with an old-monitor, glitchy matrix / cyberpunk
-feel - a sibling of [Glitch-Theme-Selector](https://github.com/DasPoxy/glitch-theme-selector)
-and [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
+feel - a sibling of [Glitch-Theme-Selector](../glitch-theme-selector)
+and [Glitch-Globe-Launcher](../glitch-globe-launcher).
 
 - **Your wallpapers, the theme's first**: the current theme's wallpapers
   (yours for it in `~/.config/omarchy/backgrounds/<theme>`, then its own)
@@ -35,17 +35,13 @@ or glitches out to the desktop. Kept in
 
 ## Install
 
+Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
+
 ```sh
-omarchy plugin add https://github.com/DasPoxy/glitch-background-selector.git --enable
+./install.sh background           # add --keys to bind its key too
 ```
 
-Open it with `omarchy-shell shell toggle glitch-background-selector '{}'`, or
-give it a key in `~/.config/hypr/bindings.lua`:
-
-```lua
-hl.unbind("SUPER + CTRL + SPACE")
-o.bind("SUPER + CTRL + SPACE", "Glitch-Background-Selector", "omarchy-shell shell toggle glitch-background-selector '{}'")
-```
+Open it with `omarchy-shell shell toggle glitch-background-selector '{}'`.
 
 ## How it works
 
