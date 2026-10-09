@@ -18,12 +18,15 @@ Item {
 
     // a payload can ask for a glitch right away, to see one:
     //   omarchy-shell shell summon globe-launcher '{"glitch":"vhs"}'
+    // or for a traffic level: '{"net":0.8}'
     function open(payloadJson) {
         root.opened = true
         Qt.callLater(function() { view.forceActiveFocus() })
         let p = {}
         try { p = typeof payloadJson === "string" ? JSON.parse(payloadJson || "{}") : (payloadJson || {}) } catch (e) {}
         if (p.glitch) { glitchSoon.kind = String(p.glitch); glitchSoon.restart() }
+        // ...or a level of network traffic (0..1) to draw, whatever the real one
+        view.netTest = Number(p.net) || 0
     }
     Timer { id: glitchSoon; property string kind: ""; interval: 700; onTriggered: view.fireGlitch(kind) }
 

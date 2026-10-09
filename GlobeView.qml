@@ -20,7 +20,7 @@ FocusScope {
     // ---------------------------------------------------------------- settings
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
-    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, preview: "grid",
+    property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, net: true, preview: "grid",
                               glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed"],
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
@@ -62,7 +62,7 @@ FocusScope {
     readonly property color cText: pal.text
     readonly property string mono: Style.font.family || "monospace"
     // the globe's looks, in the shader's order
-    readonly property var globeStyles: ["dots", "wire", "binary", "code", "holo"]
+    readonly property var globeStyles: ["dots", "wire", "binary", "code", "holo", "unicron", "dyson"]
     readonly property string glyphFont: Style.font.menuFamily || mono    // the Omarchy menu's icons
 
     // ------------------------------------------------------------------ nodes
@@ -406,6 +406,54 @@ FocusScope {
     // fresh each time it opens
     onActiveChanged: if (active) { query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() }
 
+    // ------------------------------------------------------- network traffic
+    // bytes in and out per second, summed over the real interfaces, read from
+    // /proc/net/dev each second while open; levels 0..1 on a log scale
+    // (1 KB/s ~ 0.1, 1 MB/s ~ 0.7, 30 MB/s ~ 1)
+    readonly property bool netOn: settings.net !== false
+    property real netDown: 0          // bytes/s
+    property real netUp: 0
+    property real netDownLevel: 0
+    property real netUpLevel: 0
+    property real netTest: 0          // a level to show regardless (see GlobeLauncher.open)
+    Behavior on netDownLevel { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
+    Behavior on netUpLevel { NumberAnimation { duration: 900; easing.type: Easing.InOutQuad } }
+    property var netLast: null
+    function netLevel(bps) { return Math.max(0, Math.min(1, (Math.log10(bps + 1) - 2.5) / 5)) }
+    function rate(bps) {
+        return bps >= 1048576 ? (bps / 1048576).toFixed(1) + " MB/s" : bps >= 1024 ? Math.round(bps / 1024) + " KB/s" : Math.round(bps) + " B/s"
+    }
+    Timer {
+        interval: 1000; repeat: true; triggeredOnStart: true
+        running: view.active && view.netOn
+        onRunningChanged: if (!running) { view.netLast = null; view.netDownLevel = 0; view.netUpLevel = 0 }
+        onTriggered: if (!netReader.running) netReader.running = true
+    }
+    Process {
+        id: netReader
+        command: ["cat", "/proc/net/dev"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let rx = 0, tx = 0
+                for (const line of text.split("\n").slice(2)) {
+                    const m = line.match(/^\s*([^:]+):\s*(.*)$/)
+                    if (!m || /^(lo|veth|docker|br-|virbr)/.test(m[1])) continue
+                    const f = m[2].trim().split(/\s+/)
+                    rx += Number(f[0]) || 0; tx += Number(f[8]) || 0
+                }
+                const now = Date.now(), last = view.netLast
+                if (last) {
+                    const dt = Math.max(0.2, (now - last.t) / 1000)
+                    view.netDown = Math.max(0, rx - last.rx) / dt
+                    view.netUp = Math.max(0, tx - last.tx) / dt
+                    view.netDownLevel = view.netLevel(view.netDown)
+                    view.netUpLevel = view.netLevel(view.netUp)
+                }
+                view.netLast = { t: now, rx: rx, tx: tx }
+            }
+        }
+    }
+
     // ------------------------------------------------------------- the glitches
     property real glitch: 0          // 0..1, the glitch pass's intensity
     property real glitchSeed: 0
@@ -489,6 +537,23 @@ FocusScope {
             visible: view.settings.traffic !== false
             primary: view.cPrimary
             dark: view.cBg
+        }
+
+        // network traffic: packets streaming in to the globe (down) and out (up)
+        ShaderEffect {
+            anchors.fill: parent
+            visible: view.netOn
+            property real time: view.driftT
+            property vector2d resolution: Qt.vector2d(width, height)
+            property vector2d center: Qt.vector2d(view.cx, view.cy)
+            property real radius: view.radius
+            property real down: Math.max(view.netDownLevel, view.netTest)
+            property real up: Math.max(view.netUpLevel, view.netTest * 0.6)
+            property color inColor: view.cPrimary
+            property color outColor: view.cGlow
+            property var glyphs: globeGlyphTex
+            property real glyphCount: globeGlyphs.count
+            fragmentShader: Qt.resolvedUrl("shaders/traffic.frag.qsb")
         }
 
         ShaderEffect {
@@ -679,6 +744,13 @@ FocusScope {
                 color: view.query ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
                 font.family: view.mono; font.pixelSize: 22
                 Timer { id: cursorBlink; property bool on: true; interval: 530; repeat: true; running: view.active; onTriggered: on = !on }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: view.netOn && view.netLast !== null
+                text: "▼ " + view.rate(view.netDown) + "   ▲ " + view.rate(view.netUp)
+                color: view.cPrimary; opacity: 0.55
+                font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 1
             }
         }
 
@@ -938,7 +1010,8 @@ FocusScope {
                 Layout.fillWidth: true
                 spacing: 6
                 Repeater {
-                    model: [["dots", "Dots"], ["wire", "Wireframe"], ["binary", "Binary"], ["code", "Code Earth"], ["holo", "Holo Earth"]]
+                    model: [["dots", "Dots"], ["wire", "Wireframe"], ["binary", "Binary"], ["code", "Code Earth"], ["holo", "Holo Earth"],
+                            ["unicron", "Unicron"], ["dyson", "Dyson Sphere"]]
                     delegate: Chip {
                         required property var modelData
                         label: modelData[1]
@@ -951,6 +1024,7 @@ FocusScope {
                 spacing: 6
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
+                Chip { label: "Network traffic"; on: view.settings.net !== false; onClicked: view.setSetting("net", view.settings.net === false) }
             }
 
             Heading { text: "FILE PREVIEW  ·  [TAB] while searching files" }

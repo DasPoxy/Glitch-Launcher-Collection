@@ -7,6 +7,8 @@
 //   2 binary  a skin of flickering 0s and 1s, light rays round the rim
 //   3 code    the continents built of matrix glyphs, debris drifting about
 //   4 holo    dotted continents with lit coastlines, orbit rings round it
+//   5 unicron the planet-eater: armour, vents, a mouth firing a beam, a ring
+//   6 dyson   a lattice shell round a star, light escaping through the gaps
 // The far side shows faintly through, the rim glows, and a halo sits round
 // the outside.
 layout(location = 0) in vec2 qt_TexCoord0;
@@ -142,11 +144,181 @@ float orbit(vec2 d, vec3 nrm, float R, float speed, float r2) {
     return line * 0.55 + sat * 1.6;
 }
 
+// ------------------------------------------------------------------ unicron
+// the planet-eater: an armoured sphere of plates with seams and circuitry,
+// a cratered cap, vents glowing in the theme colour. The face (a mouth
+// with mandibles, firing a beam), the ring of lights round it, its spokes
+// and the antennae stay put while the body turns behind them.
+vec3 unicronBody(vec3 n, out float glowAmt) {
+    vec3 m = transpose(mat3(rotation)) * n;
+    float lat = asin(clamp(m.y, -1.0, 1.0));
+    float lon = atan(m.z, m.x);
+    vec2 id, f, c;
+    cells(lat, lon, rings * 0.5, id, f, c);
+    float seam = 1.0 - smoothstep(0.0, 0.06, min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y)));
+    vec3 L = normalize(vec3(-0.5, 0.55, 0.65));
+    float diff = 0.25 + 0.75 * max(dot(n, L), 0.0);
+    vec3 metal = mix(vec3(0.10, 0.11, 0.16), vec3(0.20, 0.21, 0.28), hash(id)) ;
+    // the cratered cap over the north
+    float cap = smoothstep(0.0, 0.04, m.y - (0.42 + 0.12 * sin(lon * 3.0 + 1.0) + 0.05 * sin(lon * 11.0)));
+    vec2 cf = fract(vec2(lon * 3.0, lat * 6.0)) - 0.5;
+    float crater = smoothstep(0.22, 0.16, length(cf)) * step(0.55, hash(floor(vec2(lon * 3.0, lat * 6.0))));
+    vec3 capCol = mix(vec3(0.42, 0.44, 0.50), vec3(0.28, 0.29, 0.34), crater);
+    vec3 col = mix(metal, capCol, cap) * diff;
+    col *= 1.0 - seam * 0.6;
+    // circuitry: thin lit traces across some plates
+    float trace = step(0.6, hash(id + 2.0)) * (1.0 - smoothstep(0.0, 0.03, abs(fract(f.y * 3.0 + hash(id) ) - 0.5) - 0.0)) * step(0.15, f.x) * step(f.x, 0.85);
+    // vents: round, glowing
+    float vent = step(0.9, hash(id + 7.7)) * (1.0 - cap);
+    float vd = length(f - 0.5);
+    float v = vent * smoothstep(0.3, 0.2, vd);
+    glowAmt = v + trace * 0.35 * (1.0 - cap) + seam * 0.12 * (1.0 - cap);
+    col = mix(col, vec3(0.0), vent * smoothstep(0.36, 0.3, vd) * (1.0 - v));
+    return col;
+}
+
+vec4 unicron(vec2 d, float r2) {
+    float rr = sqrt(r2);
+    vec3 hot = mix(dotColor.rgb, vec3(1.0), 0.35);
+    vec3 col = vec3(0.0);
+    float a = 0.0;
+    vec2 M = vec2(0.40, -0.26);                       // the mouth
+    vec2 D = normalize(vec2(0.86, -0.5));             // where it fires
+    if (r2 < 1.0) {
+        float z = sqrt(1.0 - r2);
+        float g;
+        col = unicronBody(vec3(d, z), g);
+        col += dotColor.rgb * g * (0.8 + 0.2 * sin(time * 3.0));
+        col += glowColor.rgb * pow(1.0 - z, 2.5) * 0.6;          // rim
+        a = 1.0;
+        // the mouth: a dark socket, a molten core
+        float md = length(d - M);
+        col = mix(col, vec3(0.02), smoothstep(0.24, 0.2, md));
+        col += hot * smoothstep(0.15, 0.0, md) * 1.6 + dotColor.rgb * exp(-md * 14.0) * 0.8;
+    }
+    // mandibles: two arcs hooked round the mouth
+    {
+        vec2 q = d - M;
+        float ang = atan(q.y, q.x);
+        float ring = abs(length(q) - 0.27);
+        float upper = step(0.2, ang) * step(ang, 1.7);
+        float lower = step(-2.3, ang) * step(ang, -0.6);
+        float arc = smoothstep(0.035, 0.015, ring) * max(upper, lower);
+        col = mix(col, mix(vec3(0.12, 0.12, 0.16), dotColor.rgb * 0.6, 0.4), arc);
+        col += dotColor.rgb * smoothstep(0.012, 0.0, abs(ring - 0.03)) * max(upper, lower) * 0.8;
+        a = max(a, arc);
+    }
+    // the ring of lights, its spokes, the antennae
+    float Rr = 1.34;
+    float ringLine = smoothstep(0.012, 0.004, abs(rr - Rr));
+    float th = atan(d.y, d.x) + time * 0.04;
+    float beads = 48.0;
+    float bd = abs(fract(th / (2.0 * PI) * beads) - 0.5) * (2.0 * PI / beads) * Rr;
+    float bead = exp(-(pow(bd, 2.0) + pow(rr - Rr, 2.0)) * 9000.0) * (0.6 + 0.4 * sin(time * 4.0 + floor(th / (2.0 * PI) * beads)));
+    float spoke = smoothstep(0.012, 0.004, abs(d.x)) * step(1.0, abs(d.y)) * step(abs(d.y), Rr);
+    float sideAng = atan(d.y, abs(d.x));                       // both sides alike
+    float sb = floor(sideAng * 14.0);
+    float spikeLen = 1.0 + 0.08 + 0.16 * hash(vec2(sb, sign(d.x)));
+    float spike = step(abs(sideAng), 0.55) * step(1.0, rr) * step(rr, spikeLen)
+                * smoothstep(0.006, 0.0, abs(fract(sideAng * 14.0) - 0.5) / 14.0 * rr);
+    vec3 frameCol = mix(vec3(0.35, 0.3, 0.3), dotColor.rgb, 0.6);
+    col += frameCol * (ringLine * 0.8 + spoke * 0.9 + spike * 0.8) + hot * bead * 1.5;
+    a = max(a, max(max(ringLine, spoke), max(spike, bead)));
+    // the beam, widening, with streaks running out along it
+    vec2 q = d - M;
+    float along = dot(q, D);
+    float perp = abs(q.x * D.y - q.y * D.x);
+    float w = 0.07 + along * 0.24;
+    float beam = step(0.08, along) * smoothstep(w, w * 0.2, perp) * exp(-along * 0.45);
+    float streak = hash(vec2(floor(perp / w * 9.0), 0.0));
+    float run = fract(along * 1.5 - time * (1.0 + streak) + streak);
+    beam *= 0.6 + 0.4 * smoothstep(0.7, 1.0, run) * step(0.5, streak);
+    beam *= 0.85 + 0.15 * sin(time * 7.0);
+    col += mix(hot, dotColor.rgb, smoothstep(0.0, 1.5, along)) * beam * 1.1;
+    a = max(a, beam * 0.9);
+    // a soft halo
+    float halo = exp(-max(rr - 1.0, 0.0) * 9.0) * smoothstep(0.92, 1.0, rr);
+    col += glowColor.rgb * halo * 0.4;
+    a = max(a, halo * 0.4);
+    return vec4(col, a);
+}
+
+// -------------------------------------------------------------- dyson sphere
+// a lattice shell of triangles round a star: some panels, some open, the
+// star blazing out through the gaps and lighting the far side from within
+void dysonShell(vec3 n, out float frame, out float panel, out float lines) {
+    vec3 m = transpose(mat3(rotation)) * n;
+    float lat = asin(clamp(m.y, -1.0, 1.0));
+    float lon = atan(m.z, m.x);
+    vec2 id, f, c;
+    float rowsN = rings * 0.42;
+    cells(lat, lon, rowsN, id, f, c);
+    float H = PI / rowsN;
+    float W = H / 0.62 * cos(c.x) / max(cos(c.x), 0.25);      // ~ the cell's width
+    float dx = f.x * W, dy = f.y * H;
+    float flip = mod(id.x + id.y, 2.0);
+    float diag = flip < 0.5 ? abs(dy * W - dx * H) : abs(dx * H + dy * W - W * H);
+    diag /= sqrt(W * W + H * H);
+    float side = flip < 0.5 ? step(dx * H, dy * W) : step(W * H, dx * H + dy * W);
+    float e = min(min(min(dx, W - dx), min(dy, H - dy)), diag);
+    frame = smoothstep(0.008, 0.002, e);
+    float tri = hash(id * 2.0 + side + 0.5);
+    panel = step(0.5, tri) * smoothstep(0.002, 0.008, e);
+    lines = panel * smoothstep(0.35, 0.5, abs(fract(dx / W * 6.0) - 0.5)) * step(0.75, tri);
+}
+
+vec4 dyson(vec2 d, float r2) {
+    float rr = sqrt(r2);
+    vec3 starCol = mix(vec3(1.0, 0.9, 0.75), dotColor.rgb, 0.25);
+    float flicker = 0.92 + 0.08 * sin(time * 2.3) * sin(time * 3.7);
+    float star = (exp(-rr * 3.0) * 0.9 + exp(-rr * 14.0) * 2.5 + smoothstep(0.2, 0.16, rr) * 2.0) * flicker;
+    vec3 col = vec3(0.0);
+    float a = 0.0;
+    if (r2 < 1.0) {
+        float z = sqrt(1.0 - r2);
+        float fb, pb, lb, ff, pf, lf;
+        dysonShell(vec3(d, -z), fb, pb, lb);
+        dysonShell(vec3(d, z), ff, pf, lf);
+        // the far side, lit from inside
+        col = glowColor.rgb * 0.06 + mix(glowColor.rgb, starCol, 0.35) * pb * 0.35 + dotColor.rgb * (fb * 0.5 + lb * 0.25);
+        a = 0.25 + pb * 0.4 + fb * 0.5;
+        // the star, inside
+        col += starCol * star;
+        a = max(a, min(star, 1.0));
+        // the near side: panels block the star, their edges catch its light
+        vec3 panelCol = vec3(0.02, 0.03, 0.04) + glowColor.rgb * 0.08 + dotColor.rgb * lf * 0.3;
+        col = mix(col, panelCol, pf);
+        col += dotColor.rgb * ff * (0.7 + star * 0.8);
+        col += glowColor.rgb * pow(1.0 - z, 2.4) * 0.5;
+        a = max(a, max(pf, ff));
+    } else {
+        col = starCol * star * 0.6;
+        a = min(star * 0.6, 1.0);
+    }
+    // rays escaping past the rim, and two long orbits
+    float ang = atan(d.y, d.x);
+    float s = ang * 40.0;
+    float ray = mix(hash(vec2(floor(s), 2.0)), hash(vec2(floor(s) + 1.0, 2.0)), smoothstep(0.0, 1.0, fract(s)));
+    ray = pow(ray, 9.0) * exp(-max(rr - 1.0, 0.0) * 2.5) * step(1.0, rr);
+    float o = orbit(d, vec3(0.15, 1.0, 0.25), 1.55, 0.2, r2) + orbit(d, vec3(-0.5, 0.8, -0.3), 1.35, -0.3, r2);
+    col += starCol * ray * 0.5 + mix(glowColor.rgb, dotColor.rgb, 0.5) * o * 0.8;
+    a = max(a, max(ray * 0.5, min(o, 1.0)));
+    float halo = exp(-max(rr - 1.0, 0.0) * 9.0) * smoothstep(0.92, 1.0, rr);
+    col += glowColor.rgb * halo * 0.45;
+    a = max(a, halo * 0.45);
+    return vec4(col, clamp(a, 0.0, 1.0));
+}
+
 void main() {
     vec2 px = qt_TexCoord0 * resolution;
     vec2 d = (px - center) / radius;
     d.y = -d.y;
     float r2 = dot(d, d);
+    if (style > 4.5) {
+        vec4 o = style < 5.5 ? unicron(d, r2) : dyson(d, r2);
+        fragColor = vec4(o.rgb, o.a) * qt_Opacity;
+        return;
+    }
     vec3 col = vec3(0.0);
     float a = 0.0;
     if (r2 < 1.0) {
