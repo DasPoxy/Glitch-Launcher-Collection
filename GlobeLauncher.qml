@@ -16,10 +16,16 @@ Item {
     // anything asks; asking now has the list ready before the first opening.
     readonly property int appCount: DesktopEntries.applications ? DesktopEntries.applications.values.length : 0
 
+    // a payload can ask for a glitch right away, to see one:
+    //   omarchy-shell shell summon globe-launcher '{"glitch":"vhs"}'
     function open(payloadJson) {
         root.opened = true
         Qt.callLater(function() { view.forceActiveFocus() })
+        let p = {}
+        try { p = typeof payloadJson === "string" ? JSON.parse(payloadJson || "{}") : (payloadJson || {}) } catch (e) {}
+        if (p.glitch) { glitchSoon.kind = String(p.glitch); glitchSoon.restart() }
     }
+    Timer { id: glitchSoon; property string kind: ""; interval: 700; onTriggered: view.fireGlitch(kind) }
 
     function close() {
         root.opened = false

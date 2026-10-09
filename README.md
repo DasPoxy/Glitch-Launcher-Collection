@@ -4,17 +4,21 @@ A full-screen app launcher for [Omarchy](https://omarchy.org): your installed
 apps, projected out from a spinning dot-globe over a starfield, with the feel
 of being jacked into a terminal.
 
-- **The globe**: glowing rings of dots (or a wireframe), its far side faintly
-  showing through, a rim glow and a halo. Every app sits on it, evenly
+- **The globe**, in one of five styles: glowing rings of **dots**, a
+  **wireframe**, **binary** (a skin of flickering 0s and 1s, light rays
+  round the rim), **code earth** (the continents built of matrix glyphs,
+  debris drifting about) or **holo earth** (dotted continents, lit
+  coastlines, satellites on orbit rings). Its far side shows faintly
+  through, with a rim glow and a halo. Every app sits on it, evenly
   spread, and is projected out on a beam.
 - **Spin it**: drag (it keeps its momentum), scroll to zoom, or leave it to
   turn by itself. Whatever faces you is selected: it bulges out and unfolds
   its name; a card at the bottom shows its logo and description.
 - **Keyboard**: arrow keys hop to the nearest app that way, typing filters,
   Enter launches, Esc clears the search or closes.
-- **Atmosphere**: a full-resolution starfield, and now and then a glitch -
-  the screen tears and shakes, colours split, and a terminal in the corner
-  types a line.
+- **Atmosphere**: a full-resolution starfield, and now and then a glitch, one of:
+  tear, blocks (datamosh), VHS, CRT collapse, code bleed or invert (pick
+  which in the options) - and a terminal in the corner types a line.
 - **Space traffic**: shooting stars streak past, a comet now and then, and
   spacecraft (fighters, freighters, satellites, sometimes a formation)
   cross the sky in the distance.
@@ -32,7 +36,7 @@ of being jacked into a terminal.
   lines, archives' contents, audio tags.
 - **Options** (Ctrl+, or the button top right): colours from your Omarchy
   theme, a prebuilt theme (Matrix, Cyber, Ice, Amber, Mono) or your own,
-  dots or wireframe, auto-spin, space traffic, the preview's look, and glitches normal / subtle / off. Saved in
+  the globe's style, auto-spin, space traffic, the preview's look, and glitches normal / subtle / off and which kinds. Saved in
   `~/.config/globe-launcher/settings.json`.
 
 Clicking the selected app (or Enter) launches it and closes the launcher;
@@ -58,7 +62,7 @@ o.bind("SUPER + ALT + SPACE", "Globe-Launcher", "omarchy-shell shell toggle glob
 
 ## How it's drawn
 
-Four small GPU shaders (`shaders/`, compiled to `.qsb` with Qt's `qsb`):
+Small GPU shaders (`shaders/`, compiled to `.qsb` with Qt's `qsb`):
 the starfield, the globe (each pixel finds its point on the sphere, turns it
 back by the globe's rotation and measures the distance to the nearest dot on
 the rings of latitude), the file preview's looks, and the glitch pass over
@@ -75,3 +79,7 @@ After editing a shader, recompile it:
 ## License
 
 MIT
+
+The earth styles' map (`land.png`) is rasterised from
+[Natural Earth](https://www.naturalearthdata.com/)'s 1:50m land, which is
+in the public domain.

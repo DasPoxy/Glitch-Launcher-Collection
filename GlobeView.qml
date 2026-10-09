@@ -21,6 +21,7 @@ FocusScope {
     // ~/.config/globe-launcher/settings.json
     readonly property string settingsPath: Quickshell.env("HOME") + "/.config/globe-launcher/settings.json"
     property var settings: ({ theme: "matrix", style: "dots", glitch: "normal", autoSpin: true, traffic: true, preview: "grid",
+                              glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed"],
                               custom: { primary: "#3dff8a", glow: "#11c46a", background: "#010603", text: "#c9ffdc" } })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
@@ -33,6 +34,8 @@ FocusScope {
         path: view.settingsPath
         printErrors: false
         atomicWrites: true
+        watchChanges: true                       // edits by hand apply at once
+        onFileChanged: reload()
         onLoaded: {
             try {
                 const s = JSON.parse(text())
@@ -58,6 +61,8 @@ FocusScope {
     readonly property color cBg: pal.background
     readonly property color cText: pal.text
     readonly property string mono: Style.font.family || "monospace"
+    // the globe's looks, in the shader's order
+    readonly property var globeStyles: ["dots", "wire", "binary", "code", "holo"]
     readonly property string glyphFont: Style.font.menuFamily || mono    // the Omarchy menu's icons
 
     // ------------------------------------------------------------------ nodes
@@ -409,15 +414,30 @@ FocusScope {
     property real shakeToX: 0        // where this burst jolts to
     property real shakeToY: 0
     readonly property bool glitchesOn: settings.glitch !== "off"
+    // the kinds, in the shader's order; each burst is one of the enabled ones
+    readonly property var glitchKinds: ["tear", "blocks", "vhs", "crt", "bleed", "invert"]
+    property int glitchKind: 0
+    property int glitchHold: 180     // ms at full strength
+    function fireGlitch(kind) {
+        if (kind === undefined) {
+            const on = (settings.glitchKinds || glitchKinds).filter(g => glitchKinds.includes(g))
+            kind = on.length ? on[Math.floor(Math.random() * on.length)] : "tear"
+        }
+        glitchKind = Math.max(0, glitchKinds.indexOf(kind))
+        // a jolt for the tearing kinds; the picture-wide ones barely move
+        const jolt = ["vhs", "crt", "bleed"].includes(kind) ? 0.25 : 1
+        glitchHold = kind === "vhs" ? 420 : kind === "crt" ? 120 : kind === "bleed" ? 300 : 180
+        glitchSeed = Math.random() * 100
+        shakeToX = (Math.random() - 0.5) * 14 * jolt
+        shakeToY = (Math.random() - 0.5) * 8 * jolt
+        burst.restart()
+    }
     Timer {
         id: glitchTimer
         running: view.active && view.glitchesOn
         interval: 4000
         onTriggered: {
-            view.glitchSeed = Math.random() * 100
-            view.shakeToX = (Math.random() - 0.5) * 14
-            view.shakeToY = (Math.random() - 0.5) * 8
-            burst.restart()
+            view.fireGlitch()
             if (Math.random() < 0.5) terminal.say()
             interval = (view.settings.glitch === "subtle" ? 14000 : 5000) + Math.random() * (view.settings.glitch === "subtle" ? 16000 : 9000)
             restart()
@@ -430,8 +450,8 @@ FocusScope {
             NumberAnimation { target: view; property: "shakeX"; to: view.shakeToX; duration: 60 }
             NumberAnimation { target: view; property: "shakeY"; to: view.shakeToY; duration: 60 }
         }
-        PauseAnimation { duration: 180 }
-        ScriptAction { script: view.glitchSeed = Math.random() * 100 }
+        PauseAnimation { duration: view.glitchHold }
+        ScriptAction { script: if (view.glitchKind !== 3) view.glitchSeed = Math.random() * 100 }
         ParallelAnimation {
             NumberAnimation { target: view; property: "glitch"; to: 0; duration: 160 }
             NumberAnimation { target: view; property: "shakeX"; to: 0; duration: 220; easing.type: Easing.OutBack }
@@ -481,10 +501,40 @@ FocusScope {
             property color dotColor: view.cPrimary
             property color glowColor: view.cGlow
             property real rings: 34
-            property real wire: view.settings.style === "wire" ? 1 : 0
+            property real style: Math.max(0, view.globeStyles.indexOf(view.settings.style))
             property real pulse: view.pulse
+            property var land: landMap
+            property var glyphs: globeGlyphTex
+            property real glyphCount: globeGlyphs.count
             fragmentShader: Qt.resolvedUrl("shaders/globe.frag.qsb")
         }
+        // what the earth styles are drawn from: the land (Natural Earth, public
+        // domain), and a row of glyphs - 0 and 1 first, for the binary skin
+        Image { id: landMap; source: "land.png"; visible: false; smooth: true }
+        Item {
+            id: globeGlyphAtlas
+            width: globeGlyphs.count * 16
+            height: 26
+            Rectangle { anchors.fill: parent; color: "black" }
+            Row {
+                Repeater {
+                    id: globeGlyphs
+                    model: "01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ23456789:=+*<>Z".split("")
+                    delegate: Text {
+                        required property string modelData
+                        width: 16; height: 26
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: modelData
+                        color: "white"
+                        font.family: "Noto Sans CJK JP"
+                        font.pixelSize: 19
+                        font.bold: true
+                    }
+                }
+            }
+        }
+        ShaderEffectSource { id: globeGlyphTex; sourceItem: globeGlyphAtlas; hideSource: true; visible: false; smooth: true }
 
         // the apps, projected out from the globe on beams
         Repeater {
@@ -786,6 +836,7 @@ FocusScope {
         property real seed: view.glitchSeed
         property real scanlines: view.glitchesOn ? 1 : 0.3
         property color tint: view.cPrimary
+        property real kind: view.glitchKind
         fragmentShader: Qt.resolvedUrl("shaders/glitch.frag.qsb")
     }
 
@@ -883,10 +934,21 @@ FocusScope {
             }
 
             Heading { text: "GLOBE" }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: [["dots", "Dots"], ["wire", "Wireframe"], ["binary", "Binary"], ["code", "Code Earth"], ["holo", "Holo Earth"]]
+                    delegate: Chip {
+                        required property var modelData
+                        label: modelData[1]
+                        on: (view.globeStyles.indexOf(view.settings.style) < 0 ? "dots" : view.settings.style) === modelData[0]
+                        onClicked: view.setSetting("style", modelData[0])
+                    }
+                }
+            }
             Row {
                 spacing: 6
-                Chip { label: "Dots"; on: view.settings.style !== "wire"; onClicked: view.setSetting("style", "dots") }
-                Chip { label: "Wireframe"; on: view.settings.style === "wire"; onClicked: view.setSetting("style", "wire") }
                 Chip { label: "Auto-spin"; on: view.settings.autoSpin; onClicked: view.setSetting("autoSpin", !view.settings.autoSpin) }
                 Chip { label: "Space traffic"; on: view.settings.traffic !== false; onClicked: view.setSetting("traffic", view.settings.traffic === false) }
             }
@@ -911,6 +973,26 @@ FocusScope {
                 Chip { label: "Normal"; on: view.settings.glitch === "normal"; onClicked: view.setSetting("glitch", "normal") }
                 Chip { label: "Subtle"; on: view.settings.glitch === "subtle"; onClicked: view.setSetting("glitch", "subtle") }
                 Chip { label: "Off"; on: view.settings.glitch === "off"; onClicked: view.setSetting("glitch", "off") }
+            }
+            // which kinds: click one to switch it on (and see it) or off
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: view.glitchesOn
+                Repeater {
+                    model: [["tear", "Tear"], ["blocks", "Blocks"], ["vhs", "VHS"], ["crt", "CRT"], ["bleed", "Code bleed"], ["invert", "Invert"]]
+                    delegate: Chip {
+                        required property var modelData
+                        readonly property var kinds: view.settings.glitchKinds || view.glitchKinds
+                        label: modelData[1]
+                        on: kinds.includes(modelData[0])
+                        onClicked: {
+                            const k = modelData[0], was = on
+                            view.setSetting("glitchKinds", was ? kinds.filter(x => x !== k) : kinds.concat([k]))
+                            if (!was) view.fireGlitch(k)
+                        }
+                    }
+                }
             }
             Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
         }
