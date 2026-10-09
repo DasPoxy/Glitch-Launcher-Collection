@@ -37,6 +37,15 @@ float fbm(vec2 p, int oct) {
     return v;
 }
 
+// turn a colour's hue by a (radians), keeping its brightness (YIQ)
+vec3 hueTurn(vec3 c, float a) {
+    const mat3 toYIQ = mat3(0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.322, 0.312);
+    const mat3 toRGB = mat3(1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703);
+    vec3 yiq = toYIQ * c;
+    float h = atan(yiq.z, yiq.y) + a, ch = length(yiq.yz);
+    return max(toRGB * vec3(yiq.x, ch * cos(h), ch * sin(h)), 0.0);
+}
+
 // ridged noise: thin bright creases where the noise crosses its middle
 float ridged(vec2 p, int oct) {
     float v = 0.0, a = 0.5;
@@ -63,7 +72,12 @@ vec4 cloud(vec2 uv, float depth, float scale, float seed) {
     float drift = smoothstep(0.38, 0.72, fbm(p * 0.45 + 9.0, 3));     // where the wisps gather
     float veil = smoothstep(0.45, 0.8, fbm(p * 0.6 + 2.0, 3)) * 0.05;
     float wisp = strands * drift;
-    vec3 col = mix(tintA.rgb, tintB.rgb, smoothstep(0.35, 0.75, w.x)) * (0.7 + 0.8 * wisp);
+    vec3 col = mix(tintA.rgb, tintB.rgb, smoothstep(0.35, 0.75, w.x));
+    // drifts of colour along the strands: hues turned a little either way
+    // of the theme's, slowly, so neighbouring wisps differ
+    float shift = (fbm(p * 0.35 + vec2(seed * 0.1, time * 0.006), 3) - 0.5) * 2.1;
+    col = hueTurn(col, shift) * (0.7 + 0.8 * wisp);
+    col = mix(col, col * vec3(1.15, 0.95, 1.1), smoothstep(0.55, 0.8, w.y) * 0.4);   // a warmer touch here and there
     float a = clamp(wisp * 0.5 + veil, 0.0, 0.55);
     return vec4(col, a);
 }

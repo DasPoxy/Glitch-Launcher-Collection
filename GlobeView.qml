@@ -277,8 +277,8 @@ FocusScope {
     function turn(x, y, z, a) {
         rot = mul(axisAngle(x, y, z, a), rot)
         // the nebula drifts the way the globe turns (parallax)
-        parX -= y * a * 0.08
-        parY += x * a * 0.08
+        parX -= y * a * 0.05
+        parY += x * a * 0.05
     }
     property real parX: 0
     property real parY: 0
@@ -761,8 +761,8 @@ FocusScope {
         // each layer shifts its own amount as the globe turns and the mouse
         // moves, so they slide past one another
         readonly property vector2d nebulaShift: Qt.vector2d(
-            view.parX + (sceneHover.point.position.x / Math.max(1, width) - 0.5) * 0.06,
-            view.parY + (sceneHover.point.position.y / Math.max(1, height) - 0.5) * 0.04)
+            view.parX + (sceneHover.point.position.x / Math.max(1, width) - 0.5) * 0.035,
+            view.parY + (sceneHover.point.position.y / Math.max(1, height) - 0.5) * 0.025)
         HoverHandler { id: sceneHover }
         Item {
             width: parent.width / 2
