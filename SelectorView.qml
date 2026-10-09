@@ -252,7 +252,14 @@ FocusScope {
     }
     // options: after applying, glitch out to the desktop - once it's all on
     // (started when theme set returns, above)
-    Timer { id: outAfterApply; interval: 1100; onTriggered: if (view.closeRequest) view.closeRequest() }
+    Timer { id: outAfterApply; interval: 850; onTriggered: if (view.closeRequest) view.closeRequest() }
+    // ...glitching the whole while, so it runs straight into the glitch-out
+    Timer {
+        interval: 260 + Math.random() * 160
+        repeat: true
+        running: view.glitchLevel > 0 && ((applier.running && applier.thenClose) || outAfterApply.running)
+        onTriggered: view.fireGlitch(["tear", "blocks", "vhs", "bleed"][Math.floor(Math.random() * 4)], (0.25 + Math.random() * 0.35) * view.glitchLevel)
+    }
 
     // ------------------------------------------------------------------ time
     property real t: 0
