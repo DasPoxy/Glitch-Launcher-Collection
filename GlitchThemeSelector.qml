@@ -2,8 +2,8 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 
-// The overlay: Matrix-Theme-Select over the whole screen, taking the keyboard.
-//   omarchy-shell shell toggle matrix-theme-select '{}'
+// The overlay: Glitch-Theme-Selector over the whole screen, taking the keyboard.
+//   omarchy-shell shell toggle glitch-theme-selector '{}'
 // It glitches in over the desktop (captured as it opens) and back out to it.
 Item {
     id: root
@@ -17,7 +17,7 @@ Item {
     property bool capturing: false
     function open(payloadJson) {
         if (view.closingFx) view.playOpening()        // reopened mid-close: straight back in
-        else if (!root.opened) {
+        else if (!root.opened && view.openingWanted) {
             root.capturing = true
             view.opening = 0
             deskShot.captureFrame()
@@ -45,7 +45,7 @@ Item {
     // closing - from the shell (its toggle / hide, e.g. the key again) or
     // ourselves (Esc): glitch out first, then go
     function close() {
-        if (root.opened && !view.closingFx && !root.capturing) {
+        if (root.opened && view.openingWanted && !view.closingFx && !root.capturing) {
             view.playClosing(function() { root.finish() })
             return
         }
@@ -61,7 +61,7 @@ Item {
     }
     function dismiss() {
         if (root.shell && typeof root.shell.hide === "function")
-            root.shell.hide((root.manifest && root.manifest.id) || "matrix-theme-select")     // -> close()
+            root.shell.hide((root.manifest && root.manifest.id) || "glitch-theme-selector")     // -> close()
         else
             root.close()
     }
@@ -75,7 +75,7 @@ Item {
         visible: root.opened
         anchors { top: true; bottom: true; left: true; right: true }
         color: root.capturing || view.closingFx ? "transparent" : "black"
-        WlrLayershell.namespace: "matrix-theme-select"
+        WlrLayershell.namespace: "glitch-theme-selector"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
         exclusionMode: ExclusionMode.Ignore

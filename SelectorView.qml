@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 
-// Matrix-Theme-Select's scene: every Omarchy theme on a cover-flow arc under
+// Glitch-Theme-Selector's scene: every Omarchy theme on a cover-flow arc under
 // an old CRT monitor showing the highlighted one's preview, its full palette
 // and backgrounds read out beside it, over a starfield and a nebula tinted
 // by the theme. Arrows browse, typing filters, Enter applies (it stays
@@ -19,9 +19,9 @@ FocusScope {
     property var deskItem: null                // the desktop, captured as it opened
 
     // ---------------------------------------------------------------- settings
-    // ~/.config/matrix-theme-select/settings.json
-    readonly property string settingsPath: Quickshell.env("HOME") + "/.config/matrix-theme-select/settings.json"
-    property var settings: ({ crt: true, look: "clean" })
+    // ~/.config/glitch-theme-selector/settings.json
+    readonly property string settingsPath: Quickshell.env("HOME") + "/.config/glitch-theme-selector/settings.json"
+    property var settings: ({ crt: true, look: "clean", carousel: "arc", glitch: "normal", openGlitch: true })
     function setSetting(key, value) {
         const s = Object.assign({}, settings)
         s[key] = value
@@ -37,7 +37,7 @@ FocusScope {
         onFileChanged: reload()
         onLoaded: { try { view.settings = Object.assign({}, view.settings, JSON.parse(text())) } catch (e) {} }
     }
-    Process { running: true; command: ["mkdir", "-p", Quickshell.env("HOME") + "/.config/matrix-theme-select"] }
+    Process { running: true; command: ["mkdir", "-p", Quickshell.env("HOME") + "/.config/glitch-theme-selector"] }
 
     // the UI's colours: the highlighted theme's own (matrix green until the
     // themes are read), easing across as you browse - text, borders, panels,
@@ -101,13 +101,113 @@ FocusScope {
     property color skyA: cPrimary
     property color skyB: cGlow
 
+    // ---------------------------------------------------- carousel layouts
+    readonly property var carouselStyles: ["arc", "line", "hand", "ring", "panorama", "triple", "grid", "pills", "blips"]
+    property int gridCols: 6
+    property real posRow: 0                    // the grid's scroll, easing after sel's row
+    // where a card goes: off is its distance from the highlighted one (it
+    // eases, so cards glide); returns position, size, scale, tilt (rot) and
+    // turn (ry, about the vertical), depth, opacity, corner radius, and how
+    // far it's shrunk to a pill
+    function place(style, off, i) {
+        const aw = arc.width, W = arc.cardW, H = arc.cardH, cx = aw / 2, a = Math.abs(off)
+        const near = Math.max(0, 1 - a)
+        const p = { x: cx - W / 2, y: 10, w: W, h: H, s: 1, rot: 0, ry: 0, z: 0, o: 1, radius: 6, pill: 0, vis: true }
+        if (style === "line") {
+            const sp = W * 0.62 + 24
+            p.s = 0.62 + 0.38 * near
+            p.x = cx + off * sp + Math.sign(off) * Math.min(1, a) * W * 0.19 - W / 2
+            p.y = 10 + (1 - p.s) * H * 0.35
+            p.o = 1 - Math.min(0.7, a * 0.07)
+            p.z = 100 - a
+            p.vis = a < aw / sp / 2 + 1.5
+        } else if (style === "hand") {
+            // a fanned hand of cards, the highlighted one lifted out of it
+            const ang = off * 0.065, R = aw * 1.15
+            p.x = cx + Math.sin(ang) * R - W / 2
+            p.y = 46 + (1 - Math.cos(ang)) * R - 56 * near
+            p.rot = ang * 180 / Math.PI * (1 - near)
+            p.s = 0.78 + 0.22 * near
+            p.z = 100 + off + 60 * near
+            p.vis = a < 11
+        } else if (style === "ring") {
+            // a carousel turning in 3D: the far side small and dim behind
+            const n = Math.max(6, Math.min(shown.length, 16)), ang = off * 2 * Math.PI / n
+            const d = Math.cos(ang)
+            p.x = cx + Math.sin(ang) * aw * 0.34 - W / 2
+            p.y = 24 - d * 14
+            p.s = 0.45 + 0.4 * (d + 1) / 2 + 0.15 * near
+            p.z = d * 100
+            p.o = 0.18 + 0.82 * (d + 1) / 2
+            p.ry = -Math.sin(ang) * 35
+            p.vis = a <= n / 2
+        } else if (style === "panorama") {
+            // a wall of cards bending away to either side
+            const sp = W * 0.66
+            p.ry = Math.max(-62, Math.min(62, -off * 26))
+            p.x = cx + off * sp * (1 - Math.min(0.25, a * 0.03)) - W / 2
+            p.s = 0.86 + 0.14 * near
+            p.o = 1 - Math.min(0.6, a * 0.08)
+            p.z = 100 - a
+            p.vis = a < 7
+        } else if (style === "triple") {
+            p.x = cx + off * W * 0.95 - W / 2
+            p.s = 1 - 0.3 * Math.min(1, a)
+            p.o = (1 - 0.45 * Math.min(1, a)) * Math.max(0, Math.min(1, 1.7 - a))
+            p.z = 100 - a
+            p.vis = a < 1.7
+        } else if (style === "grid") {
+            // rows of smaller cards, scrolling a row at a time
+            const gw = W * 0.62, gh = H * 0.62, cols = gridCols
+            const row = Math.floor(i / cols), col = i % cols
+            const rowOff = row - posRow
+            p.w = gw; p.h = gh
+            p.x = (aw - cols * (gw + 14) + 14) / 2 + col * (gw + 14)
+            p.y = 6 + (rowOff + 0.15) * (gh + 16)
+            p.s = i === sel ? 1.08 : 1
+            p.z = i === sel ? 200 : 100
+            p.o = Math.max(0, Math.min(1, 1.6 - Math.abs(rowOff - 0.5) * 1.3))
+            p.vis = rowOff > -1.2 && rowOff < 2.2
+        } else if (style === "pills") {
+            // thin pills in each theme's colours; the highlighted one opens
+            // out into its card
+            const pw = 46, gap = 12
+            const w = pw + (W - pw) * near
+            const c = Math.sign(off) * (Math.min(1, a) * (W / 2 + gap + pw / 2) + Math.max(0, a - 1) * (pw + gap))
+            p.w = w
+            p.x = cx + c - w / 2
+            p.radius = 14 * near + (pw / 2) * (1 - near)
+            p.pill = 1 - Math.min(1, near * 1.6)
+            p.z = 100 - a
+            p.vis = a < (aw / 2 - W / 2) / (pw + gap) + 1
+        } else if (style === "blips") {
+            // only the highlighted card, risen over its blip
+            p.y = 6
+            p.o = Math.max(0, 1 - a * 1.8)
+            p.s = 0.9 + 0.1 * near
+            p.vis = a < 0.6
+        } else {
+            // arc (cover flow)
+            const th = off * 0.3, d = Math.cos(Math.max(-1.55, Math.min(1.55, th)))
+            p.x = cx + Math.sin(th) * aw * 0.44 - W / 2
+            p.y = 10 + (1 - d) * 40
+            p.z = d * 100
+            p.s = 0.45 + 0.55 * d
+            p.o = 0.25 + 0.75 * d
+            p.vis = a < 9 && d > 0.05
+        }
+        return p
+    }
+
     function step(d) {
         if (!shown.length) return
         sel = ((sel + d) % shown.length + shown.length) % shown.length
     }
     // browsing: a small glitch, of any of the lighter kinds
+    readonly property real glitchLevel: settings.glitch === "off" ? 0 : settings.glitch === "subtle" ? 0.5 : 1
     onSelChanged: {
-        fireGlitch(["tear", "tear", "blocks", "vhs", "bleed"][Math.floor(Math.random() * 5)], 0.18 + Math.random() * 0.17)
+        if (glitchLevel > 0)
+            fireGlitch(["tear", "tear", "blocks", "vhs", "bleed"][Math.floor(Math.random() * 5)], (0.18 + Math.random() * 0.17) * glitchLevel)
         revealAnim.restart(); paletteReveal.restart()
     }
 
@@ -122,13 +222,15 @@ FocusScope {
     }
     function apply(t) {
         if (!t) return
-        if (t.current) { terminal.push("> already running :: " + t.name); fireGlitch("tear", 0.4); return }
+        if (t.current) { terminal.push("> already running :: " + t.name); fireGlitch("tear", 0.4 * glitchLevel); return }
         if (applier.running) return
         applier.name = t.name
         applier.command = ["omarchy-theme-set", t.name]
         applier.running = true
-        fireGlitch(["blocks", "vhs", "crt", "bleed", "tear"][Math.floor(Math.random() * 5)], 1)
-        stutter.left = 2; stutter.restart()                      // and it keeps fighting it
+        if (glitchLevel > 0) {
+            fireGlitch(["blocks", "vhs", "crt", "bleed", "tear"][Math.floor(Math.random() * 5)], glitchLevel)
+            stutter.left = 2; stutter.restart()                  // and it keeps fighting it
+        }
         terminal.scrawl(["> rewriting palette :: " + t.slug, "> pushing to the shell, terminals, editors..."])
     }
 
@@ -140,6 +242,7 @@ FocusScope {
             const dt = Math.min(frameTime, 0.05)
             view.t += dt
             view.pos += (view.sel - view.pos) * Math.min(1, dt * 9)
+            view.posRow += (Math.floor(view.sel / Math.max(1, view.gridCols)) - view.posRow) * Math.min(1, dt * 9)
         }
     }
 
@@ -173,7 +276,7 @@ FocusScope {
     }
     Timer {
         id: actingUp
-        running: view.active
+        running: view.active && view.glitchLevel > 0
         interval: 5000
         onTriggered: {
             const r = Math.random()
@@ -182,7 +285,7 @@ FocusScope {
                 terminal.push("> sync lost ... reacquired")
                 view.fireGlitch("tear", 0.3)
             } else {
-                view.fireGlitch(view.randomKind(), 0.35 + Math.random() * 0.65)
+                view.fireGlitch(view.randomKind(), (0.35 + Math.random() * 0.65) * view.glitchLevel)
                 if (r > 0.78) { stutter.left = 1 + Math.floor(Math.random() * 2); stutter.restart() }
                 if (Math.random() < 0.5) terminal.say()
             }
@@ -196,7 +299,8 @@ FocusScope {
         interval: 140 + Math.random() * 220
         repeat: true
         onTriggered: {
-            view.fireGlitch(view.randomKind() === "invert" ? "tear" : view.randomKind(), 0.3 + Math.random() * 0.5)
+            const k = view.randomKind()
+            view.fireGlitch(k === "invert" ? "tear" : k, (0.3 + Math.random() * 0.5) * Math.max(0.5, view.glitchLevel))
             if (--left <= 0) stop()
         }
     }
@@ -218,6 +322,7 @@ FocusScope {
 
     // opening (0 -> 1) and closing (1 -> 0): a random kind, from / to the desktop
     property real opening: 1
+    readonly property bool openingWanted: settings.openGlitch !== false
     property bool closingFx: false
     property var closeDone: null
     function pickTransitionKind() {
@@ -250,6 +355,7 @@ FocusScope {
     // fresh each time it opens
     onActiveChanged: if (active) {
         query = ""
+        settingsOpen = false
         landOnCurrent = true
         themeReader.running = true
         forceActiveFocus()
@@ -259,9 +365,17 @@ FocusScope {
     // -------------------------------------------------------------- keyboard
     Keys.onPressed: event => {
         const k = event.key, ctrl = event.modifiers & Qt.ControlModifier
+        if (settingsOpen) {
+            if (k === Qt.Key_Escape || (k === Qt.Key_Comma && ctrl)) { settingsOpen = false; event.accepted = true }
+            return
+        }
+        const rowStep = settings.carousel === "grid" ? gridCols : 1
         if (k === Qt.Key_Escape) { if (query) query = ""; else if (closeRequest) closeRequest() }
-        else if (k === Qt.Key_Left || k === Qt.Key_Up) step(-1)
-        else if (k === Qt.Key_Right || k === Qt.Key_Down) step(1)
+        else if (k === Qt.Key_Comma && ctrl) settingsOpen = true
+        else if (k === Qt.Key_Left) step(-1)
+        else if (k === Qt.Key_Right) step(1)
+        else if (k === Qt.Key_Up) step(-rowStep)
+        else if (k === Qt.Key_Down) step(rowStep)
         else if (k === Qt.Key_PageUp) step(-5)
         else if (k === Qt.Key_PageDown) step(5)
         else if (k === Qt.Key_Home) sel = 0
@@ -272,7 +386,7 @@ FocusScope {
             setSetting("look", looks[(looks.indexOf(settings.look) + (back ? 3 : 1)) % 4])
             revealAnim.restart()
         }
-        else if (k === Qt.Key_T && ctrl) { setSetting("crt", !settings.crt); fireGlitch("crt", 0.8) }
+        else if (k === Qt.Key_T && ctrl) { setSetting("crt", !settings.crt); if (glitchLevel > 0) fireGlitch("crt", 0.8 * glitchLevel) }
         else if (k === Qt.Key_Backspace) { query = query.slice(0, -1); sel = 0; pos = 0 }
         else if (event.text && event.text.length === 1 && event.text >= " " && !ctrl) { query += event.text; sel = 0; pos = 0 }
         else return
@@ -329,7 +443,7 @@ FocusScope {
             spacing: 6
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "// MATRIX-THEME-SELECT  ·  " + view.shown.length + " THEMES"
+                text: "// GLITCH-THEME-SELECTOR  ·  " + view.shown.length + " THEMES"
                       + (view.activeTheme ? "  ·  RUNNING: " + view.activeTheme.name.toUpperCase() : "")
                       + (view.query ? "  ·  FILTER ACTIVE" : "")
                 color: view.cPrimary; opacity: 0.7
@@ -570,52 +684,77 @@ FocusScope {
         // the palette typing in, a row at a time
         NumberAnimation { id: paletteReveal; target: view; property: "paletteShown"; from: 0; to: 40; duration: 700 }
 
-        // ---------------------------------------------------------- the arc
-        // every theme as a card on a cover-flow arc: the highlighted one big
-        // in front, its neighbours turning away to either side
+        // ------------------------------------------------------ the carousel
+        // every theme as a card, laid out in the chosen style (options):
+        // arc, line, hand, ring, panorama, triple, grid, pills or blips
         Item {
             id: arc
             anchors.left: parent.left; anchors.right: parent.right
             y: monitor.y + monitor.height + 30
             height: view.height - y - 70
+            readonly property string style: view.carouselStyles.indexOf(view.settings.carousel) >= 0 ? view.settings.carousel : "arc"
+            readonly property real cardW: Math.min(360, height * 1.2)
+            readonly property real cardH: cardW * 0.62
+            readonly property int cols: Math.max(1, Math.floor((width - 120) / (cardW * 0.62 + 14)))
+            onColsChanged: view.gridCols = cols
+            Component.onCompleted: view.gridCols = cols
+
             Repeater {
                 model: view.shown
                 delegate: Item {
                     id: card
                     required property var modelData
                     required property int index
-                    readonly property real off: index - view.pos
-                    readonly property real th: off * 0.3
-                    readonly property bool near: Math.abs(off) < 9
-                    readonly property real depth: Math.cos(Math.max(-1.55, Math.min(1.55, th)))
+                    readonly property var at: view.place(arc.style, index - view.pos, index)
                     readonly property bool isSel: index === view.sel
-                    visible: near && depth > 0.05
-                    width: Math.min(360, arc.height * 1.2)
-                    height: width * 0.62
-                    x: arc.width / 2 + Math.sin(th) * arc.width * 0.44 - width / 2
-                    y: 10 + (1 - depth) * 40
-                    z: depth * 100
-                    scale: 0.45 + 0.55 * depth
-                    opacity: 0.25 + 0.75 * depth
+                    readonly property color cardAccent: view.colorOf(modelData, "accent", "blue", "cyan", "foreground") || view.cPrimary
+                    readonly property color cardBack: view.colorOf(modelData, "background", "dark_background") || "#000000"
+                    visible: at.vis
+                    x: at.x; y: at.y
+                    width: at.w; height: at.h
+                    z: at.z
+                    scale: at.s
+                    opacity: at.o
+                    rotation: at.rot
+                    transform: Rotation {
+                        origin.x: card.width / 2; origin.y: card.height / 2
+                        axis { x: 0; y: 1; z: 0 }
+                        angle: card.at.ry
+                    }
                     Rectangle {
                         anchors.fill: parent
-                        radius: 6
+                        radius: card.at.radius
                         color: "black"
                         border.width: card.isSel ? 2 : 1
                         border.color: card.isSel ? view.cPrimary : Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.45)
                         clip: true
                         Image {
                             anchors.fill: parent; anchors.margins: 2
-                            source: card.near && card.modelData.preview ? "file://" + encodeURI(card.modelData.preview).replace(/#/g, "%23") : ""
+                            opacity: 1 - card.at.pill
+                            visible: opacity > 0.01
+                            source: card.at.vis && card.modelData.preview ? "file://" + encodeURI(card.modelData.preview).replace(/#/g, "%23") : ""
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             sourceSize: Qt.size(320, 200)
+                        }
+                        // a pill: the theme's own colours, top to bottom
+                        Rectangle {
+                            anchors.fill: parent; anchors.margins: 2
+                            radius: Math.max(0, card.at.radius - 2)
+                            opacity: card.at.pill
+                            visible: opacity > 0.01
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: card.cardAccent }
+                                GradientStop { position: 0.55; color: Qt.darker(card.cardAccent, 1.8) }
+                                GradientStop { position: 1.0; color: card.cardBack }
+                            }
                         }
                         // its palette, a strip along the bottom
                         Row {
                             anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
                             anchors.margins: 2
                             height: 8
+                            visible: card.at.pill < 0.5
                             Repeater {
                                 model: card.modelData.colors.slice(0, 12)
                                 delegate: Rectangle {
@@ -630,6 +769,7 @@ FocusScope {
                             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
                             anchors.margins: 2
                             height: 24
+                            visible: card.at.pill < 0.5
                             color: Qt.rgba(0, 0, 0, 0.65)
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -645,7 +785,7 @@ FocusScope {
                         visible: card.isSel
                         anchors.fill: parent
                         anchors.margins: -8
-                        radius: 12
+                        radius: card.at.radius + 6
                         color: "transparent"
                         border.width: 6
                         border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.22)
@@ -657,17 +797,58 @@ FocusScope {
                     }
                 }
             }
+            // blips: a dot for every theme along the bottom, the highlighted
+            // one bright, its card risen above it
+            Repeater {
+                model: arc.style === "blips" ? view.shown : []
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+                    readonly property real off: index - view.pos
+                    readonly property real near: Math.max(0, 1 - Math.abs(off))
+                    visible: Math.abs(off) < arc.width / 2 / 22
+                    width: 8 + 10 * near; height: width; radius: width / 2
+                    x: arc.width / 2 + off * 22 - width / 2
+                    y: arc.cardH + 46 - height / 2
+                    color: view.colorOf(modelData, "accent", "blue", "foreground") || view.cPrimary
+                    opacity: 0.35 + 0.65 * near
+                    border.width: index === view.sel ? 2 : 0
+                    border.color: view.cText
+                    MouseArea { anchors.fill: parent; anchors.margins: -6; onClicked: view.sel = parent.index }
+                }
+            }
+            // blips: the line the card rises from
+            Rectangle {
+                visible: arc.style === "blips"
+                x: arc.width / 2 - 1; y: arc.cardH + 6
+                width: 2; height: 40 - 9
+                color: view.cPrimary; opacity: 0.6
+            }
         }
         // wheel over the arc browses
         WheelHandler {
             onWheel: event => view.step(event.angleDelta.y > 0 || event.angleDelta.x > 0 ? -1 : 1)
         }
 
+        // the options button
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 30
+            width: gearText.implicitWidth + 24; height: 32; radius: 4
+            color: gearHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.15) : "transparent"
+            border.width: 1
+            border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.6)
+            Text { id: gearText; anchors.centerIn: parent; text: "[ options ]"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13 }
+            HoverHandler { id: gearHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: view.settingsOpen = !view.settingsOpen }
+        }
+
         // ------------------------------------------------------------ hints
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
-            text: "[← →] browse   [ENTER] apply   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [type] filter   [ESC] " + (view.query ? "clear" : "exit")
+            text: "[← →] browse   [ENTER] apply   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [type] filter   [ESC] " + (view.query ? "clear" : "exit")
             color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 12
         }
 
@@ -770,5 +951,93 @@ FocusScope {
         property real shockR: 0
         property real shockAmt: 0
         fragmentShader: Qt.resolvedUrl("shaders/glitch.frag.qsb")
+    }
+
+    // ---------------------------------------------------------------- options
+    // drawn outside the glitch pass, so it stays readable
+    property bool settingsOpen: false
+    Rectangle {
+        id: options
+        visible: view.settingsOpen
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.topMargin: 72
+        anchors.rightMargin: 30
+        width: 420
+        height: optCol.implicitHeight + 32
+        radius: 6
+        color: Qt.rgba(view.cBg.r, view.cBg.g, view.cBg.b, 0.95)
+        border.width: 1
+        border.color: view.cPrimary
+        MouseArea { anchors.fill: parent }        // keep clicks off the cards
+
+        component Chip: Rectangle {
+            id: chip
+            property string label: ""
+            property bool on: false
+            signal clicked()
+            width: chipText.implicitWidth + 18; height: 26; radius: 3
+            color: on ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.2) : (chipHover.hovered ? Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.08) : "transparent")
+            border.width: 1
+            border.color: on ? view.cPrimary : Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, 0.35)
+            Text { id: chipText; anchors.centerIn: parent; text: chip.label; color: chip.on ? view.cPrimary : view.cText; font.family: view.mono; font.pixelSize: 12 }
+            HoverHandler { id: chipHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: chip.clicked() }
+        }
+        component Heading: Text { color: view.cPrimary; opacity: 0.8; font.family: view.mono; font.pixelSize: 11; font.letterSpacing: 2 }
+
+        ColumnLayout {
+            id: optCol
+            x: 16; y: 16
+            width: parent.width - 32
+            spacing: 10
+            Text { text: "> OPTIONS"; color: view.cText; font.family: view.mono; font.pixelSize: 16; font.bold: true }
+
+            Heading { text: "CAROUSEL" }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Repeater {
+                    model: [["arc", "Arc"], ["line", "Line"], ["hand", "Hand"], ["ring", "Ring"], ["panorama", "Panorama"],
+                            ["triple", "Triple"], ["grid", "Grid"], ["pills", "Pills"], ["blips", "Blips"]]
+                    delegate: Chip {
+                        required property var modelData
+                        label: modelData[1]
+                        on: (view.carouselStyles.indexOf(view.settings.carousel) >= 0 ? view.settings.carousel : "arc") === modelData[0]
+                        onClicked: view.setSetting("carousel", modelData[0])
+                    }
+                }
+            }
+
+            Heading { text: "MONITOR  ·  [TAB] cycles"; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Repeater {
+                    model: ["clean", "grid", "glyph", "rain"]
+                    delegate: Chip {
+                        required property string modelData
+                        label: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        on: (view.settings.look || "clean") === modelData
+                        onClicked: { view.setSetting("look", modelData); view.reveal = 0; revealAnim.restart() }
+                    }
+                }
+                Chip { label: "CRT monitor"; on: view.settings.crt !== false; onClicked: view.setSetting("crt", view.settings.crt === false) }
+            }
+
+            Heading { text: "GLITCHES" }
+            Flow {
+                Layout.fillWidth: true
+                Layout.maximumWidth: optCol.width
+                spacing: 6
+                Chip { label: "Normal"; on: (view.settings.glitch || "normal") === "normal"; onClicked: view.setSetting("glitch", "normal") }
+                Chip { label: "Subtle"; on: view.settings.glitch === "subtle"; onClicked: view.setSetting("glitch", "subtle") }
+                Chip { label: "Off"; on: view.settings.glitch === "off"; onClicked: view.setSetting("glitch", "off") }
+                Chip { label: "Open/close glitch"; on: view.settings.openGlitch !== false; onClicked: view.setSetting("openGlitch", view.settings.openGlitch === false) }
+            }
+            Text { text: "[ESC] close options"; color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 11 }
+        }
     }
 }

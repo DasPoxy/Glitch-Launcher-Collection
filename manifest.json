@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "matrix-theme-select",
-  "name": "Matrix-Theme-Select",
+  "id": "glitch-theme-selector",
+  "name": "Glitch-Theme-Selector",
   "version": "0.1.0",
   "author": "DasPoxy",
   "license": "MIT",
-  "description": "An Omarchy theme selector in an old-monitor, matrix/cyberpunk style: browse every theme's preview and full palette on a glitching CRT, apply with Enter.",
+  "description": "An Omarchy theme selector in an old-monitor, glitchy matrix/cyberpunk style: browse every theme's preview and full palette on a glitching CRT, apply with Enter.",
   "kinds": [
     "overlay"
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "overlay": "ThemeSelect.qml"
+    "overlay": "GlitchThemeSelector.qml"
   }
 }

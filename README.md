@@ -1,4 +1,4 @@
-# Matrix-Theme-Select
+# Glitch-Theme-Selector
 
 An Omarchy theme selector with an old-monitor, matrix / cyberpunk feel - a
 sibling of [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
@@ -6,8 +6,15 @@ sibling of [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
 - **The monitor**: the highlighted theme's preview on a glowing CRT set,
   materialising as you move to it - plain, or through a grid, glyph or code
   rain look (Tab). Themes without a preview show their palette as colour bars.
-- **The arc**: every theme as a card on a cover-flow arc, its palette in a
-  strip along the bottom; arrows, the wheel or a click browse, typing filters.
+- **The carousel**: every theme as a card, its palette in a strip along the
+  bottom, in one of nine styles (options): arc (cover flow), line, hand (a
+  fanned hand of cards), ring (3D), panorama, triple, grid, pills (thin
+  pills in each theme's colours, the highlighted one opening into its card)
+  or blips (a dot per theme, the card risen over its blip). Arrows, the
+  wheel or a click browse, typing filters.
+- **Options** (Ctrl+, or the button top right): the carousel style, the
+  monitor's look, CRT on / off, glitches normal / subtle / off, and the
+  open / close glitch.
 - **The readout**: the theme's name, slug, mode, whether it's stock or
   installed and running, its whole palette (every colour by name and hex,
   typing in row by row) and its backgrounds.
@@ -21,24 +28,24 @@ sibling of [Globe-Launcher](https://github.com/DasPoxy/globe-launcher).
   light glitch as you browse, and glitching in over your desktop and back
   out to it.
 
-Settings (CRT, look) are kept in `~/.config/matrix-theme-select/settings.json`.
+Settings are kept in `~/.config/glitch-theme-selector/settings.json`.
 
 ## Install
 
 ```sh
-omarchy plugin add https://github.com/DasPoxy/matrix-theme-select.git --enable
+omarchy plugin add https://github.com/DasPoxy/glitch-theme-selector.git --enable
 ```
 
 Open it with:
 
 ```sh
-omarchy-shell shell toggle matrix-theme-select '{}'
+omarchy-shell shell toggle glitch-theme-selector '{}'
 ```
 
 and give it a key in `~/.config/hypr/bindings.lua`, for example:
 
 ```lua
-o.bind("SUPER + ALT + SHIFT + SPACE", "Matrix-Theme-Select", "omarchy-shell shell toggle matrix-theme-select '{}'")
+o.bind("SUPER + ALT + SHIFT + SPACE", "Glitch-Theme-Selector", "omarchy-shell shell toggle glitch-theme-selector '{}'")
 ```
 
 ## How it works

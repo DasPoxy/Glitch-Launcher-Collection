@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Matrix-Theme-Select's catalogue: every Omarchy theme as JSON.
+"""Glitch-Theme-Selector's catalogue: every Omarchy theme as JSON.
 
     themes.py
 
