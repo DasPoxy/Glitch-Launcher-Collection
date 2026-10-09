@@ -105,7 +105,11 @@ FocusScope {
         if (!shown.length) return
         sel = ((sel + d) % shown.length + shown.length) % shown.length
     }
-    onSelChanged: { fireGlitch("tear", 0.28); revealAnim.restart(); paletteReveal.restart() }
+    // browsing: a small glitch, of any of the lighter kinds
+    onSelChanged: {
+        fireGlitch(["tear", "tear", "blocks", "vhs", "bleed"][Math.floor(Math.random() * 5)], 0.18 + Math.random() * 0.17)
+        revealAnim.restart(); paletteReveal.restart()
+    }
 
     // apply: `omarchy theme set`, a hard glitch, and stay open
     Process {
@@ -124,6 +128,7 @@ FocusScope {
         applier.command = ["omarchy-theme-set", t.name]
         applier.running = true
         fireGlitch(["blocks", "vhs", "crt", "bleed", "tear"][Math.floor(Math.random() * 5)], 1)
+        stutter.left = 2; stutter.restart()                      // and it keeps fighting it
         terminal.scrawl(["> rewriting palette :: " + t.slug, "> pushing to the shell, terminals, editors..."])
     }
 
@@ -159,15 +164,40 @@ FocusScope {
         shakeToY = (Math.random() - 0.5) * 8 * jolt * burstPeak
         burst.restart()
     }
-    // the old monitor acting up now and then
+    // the old monitor acting up now and then: any kind (a negative flash
+    // only rarely), at any strength, sometimes stuttering two or three times
+    // in a row; or the set itself losing sync and rebuilding its picture
+    function randomKind() {
+        const r = Math.random()
+        return r < 0.04 ? "invert" : ["tear", "blocks", "vhs", "crt", "bleed"][Math.floor(Math.random() * 5)]
+    }
     Timer {
+        id: actingUp
         running: view.active
         interval: 5000
         onTriggered: {
-            view.fireGlitch(["tear", "blocks", "vhs", "bleed"][Math.floor(Math.random() * 4)], 0.7)
-            if (Math.random() < 0.5) terminal.say()
-            interval = 6000 + Math.random() * 9000
+            const r = Math.random()
+            if (r < 0.15) {
+                revealAnim.restart()                             // signal lost ... reacquired
+                terminal.push("> sync lost ... reacquired")
+                view.fireGlitch("tear", 0.3)
+            } else {
+                view.fireGlitch(view.randomKind(), 0.35 + Math.random() * 0.65)
+                if (r > 0.78) { stutter.left = 1 + Math.floor(Math.random() * 2); stutter.restart() }
+                if (Math.random() < 0.5) terminal.say()
+            }
+            interval = 4500 + Math.random() * 10000
             restart()
+        }
+    }
+    Timer {
+        id: stutter
+        property int left: 0
+        interval: 140 + Math.random() * 220
+        repeat: true
+        onTriggered: {
+            view.fireGlitch(view.randomKind() === "invert" ? "tear" : view.randomKind(), 0.3 + Math.random() * 0.5)
+            if (--left <= 0) stop()
         }
     }
     SequentialAnimation {
@@ -191,7 +221,7 @@ FocusScope {
     property bool closingFx: false
     property var closeDone: null
     function pickTransitionKind() {
-        glitchKind = Math.floor(Math.random() * 5)
+        glitchKind = Math.random() < 0.08 ? 5 : Math.floor(Math.random() * 5)
         glitchSeed = Math.random() * 100
     }
     function playOpening() {
