@@ -1,9 +1,9 @@
 # Glitch-Globe-Launcher
 
-![Holo Earth](../screenshots/globe-holo.jpg)
-![Unicron](../screenshots/globe-unicron.jpg)
-![Bestagon](../screenshots/globe-hex.jpg)
-![File preview](../screenshots/globe-files.jpg)
+![Holo Earth](preview.jpg)
+![Unicron](screenshots/globe-unicron.jpg)
+![Bestagon](screenshots/globe-hex.jpg)
+![File preview](screenshots/globe-files.jpg)
 
 A full-screen app launcher for [Omarchy](https://omarchy.org): your installed
 apps, projected out from a spinning dot-globe over a starfield, with the feel
@@ -79,13 +79,42 @@ clicking another app turns the globe to it.
 
 ## Install
 
-Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
-
 ```sh
-./install.sh globe           # add --keys to bind its key too
+omarchy plugin add https://github.com/DasPoxy/glitch-globe-launcher --enable
 ```
 
-Open it with `omarchy-shell shell toggle glitch-globe-launcher '{}'`.
+Then bind a key for it in `~/.config/hypr/bindings.lua` - for example in
+place of the Omarchy menu, which this moves to Super + Ctrl + Alt + Space:
+
+```lua
+hl.unbind("SUPER + SPACE")
+o.bind("SUPER + SPACE", "Glitch-Globe-Launcher", "omarchy-shell shell toggle glitch-globe-launcher '{}'")
+o.bind("SUPER + CTRL + ALT + SPACE", "Omarchy menu", "omarchy-menu toggle")
+```
+
+Or open it with `omarchy-shell shell toggle glitch-globe-launcher '{}'`.
+
+Needs `fd` and `fzf` for the `/` file search, and Python 3 with Pillow
+(`python-pillow`) for 3D model previews. Optional, for richer previews:
+`ffmpeg` (video and audio details), `poppler` (PDF pages), `libarchive`
+(what's in an archive), `qt6-multimedia` (video), `noto-fonts-cjk` (the
+glyph and rain looks' katakana).
+
+It's one of four in
+[Glitch-Launcher-Collection](https://github.com/DasPoxy/Glitch-Launcher-Collection),
+whose installer can add any or all of them and bind their keys for you.
+
+## Uninstall
+
+```sh
+omarchy plugin remove glitch-globe-launcher
+```
+
+Then take its lines out of `~/.config/hypr/bindings.lua` - the `hl.unbind`
+too, so Omarchy's own key for it works again. Its settings
+(`~/.config/glitch-globe-launcher`) and cache
+(`~/.cache/glitch-globe-launcher`) are left; delete them
+too if you want them gone.
 
 ## How it's drawn
 

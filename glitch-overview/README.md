@@ -1,11 +1,11 @@
 # Glitch-Overview
 
-![Glitch-Overview](../screenshots/overview-files.jpg)
+![Glitch-Overview](preview.jpg)
 
 An Alt+Tab workspace overview in the Glitch-Launcher-Collection style - a
-sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher),
-[Glitch-Theme-Selector](../glitch-theme-selector) and
-[Glitch-Background-Selector](../glitch-background-selector).
+sibling of [Glitch-Globe-Launcher](https://github.com/DasPoxy/glitch-globe-launcher),
+[Glitch-Theme-Selector](https://github.com/DasPoxy/glitch-theme-selector) and
+[Glitch-Background-Selector](https://github.com/DasPoxy/glitch-background-selector).
 
 - **Alt+Tab**: opens on the workspace you were on before this one; Alt+Tab
   again (Alt still held) steps on, Alt+Shift+Tab steps back, and letting go
@@ -34,14 +34,14 @@ glitches normal / subtle / off, and the open / close glitch. Kept in
 
 ## Install
 
-Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
-
 ```sh
-./install.sh overview        # add --keys to bind Alt+Tab / Alt+Shift+Tab too
+omarchy plugin add https://github.com/DasPoxy/glitch-overview --enable
 ```
 
-The keys must *summon* it (not toggle), with a payload saying which way to
-step - that's what lets Alt+Tab pressed again step on instead of closing it:
+Then bind its keys in `~/.config/hypr/bindings.lua`, in place of Omarchy's
+window cycling. The keys must *summon* it (not toggle), with a payload saying
+which way to step - that's what lets Alt+Tab pressed again step on instead of
+closing it:
 
 ```lua
 hl.unbind("ALT + TAB")
@@ -49,6 +49,24 @@ o.bind("ALT + TAB", "Glitch-Overview", "omarchy-shell shell summon glitch-overvi
 hl.unbind("ALT + SHIFT + TAB")
 o.bind("ALT + SHIFT + TAB", "Glitch-Overview (back)", "omarchy-shell shell summon glitch-overview '{\"alt\":true,\"step\":-1}'")
 ```
+
+Or open it with `omarchy-shell shell summon glitch-overview '{}'`.
+
+Needs Python 3 (each workspace's CPU and memory).
+
+It's one of four in
+[Glitch-Launcher-Collection](https://github.com/DasPoxy/Glitch-Launcher-Collection),
+whose installer can add any or all of them and bind their keys for you.
+
+## Uninstall
+
+```sh
+omarchy plugin remove glitch-overview
+```
+
+Then take its lines out of `~/.config/hypr/bindings.lua` - the `hl.unbind`
+too, so Omarchy's own key for it works again. Its settings
+(`~/.config/glitch-overview`) are left; delete them too if you want them gone.
 
 ## License
 

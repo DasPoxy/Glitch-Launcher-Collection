@@ -19,7 +19,14 @@ out again:
 | **Glitch-Background-Selector** | [`glitch-background-selector`](glitch-background-selector) | the theme's wallpapers, then your own folder; fit modes; Enter sets | Super + Ctrl + Space |
 | **Glitch-Overview** | [`glitch-overview`](glitch-overview) | Alt+Tab for workspaces: every window live on a CRT, each one's CPU and memory scrawled beside it; let go of Alt to go | Alt + Tab |
 
-Each folder is a complete plugin with its own README.
+Each folder is a complete plugin with its own README, and each is also
+published as a repository of its own, to add one at a time with
+`omarchy plugin add` (or from the Omarchy plugin marketplace):
+[glitch-globe-launcher](https://github.com/DasPoxy/glitch-globe-launcher),
+[glitch-theme-selector](https://github.com/DasPoxy/glitch-theme-selector),
+[glitch-background-selector](https://github.com/DasPoxy/glitch-background-selector),
+[glitch-overview](https://github.com/DasPoxy/glitch-overview). This
+collection is where they're made; its installer can also bind their keys.
 
 ## Screenshots
 
@@ -27,35 +34,35 @@ Each folder is a complete plugin with its own README.
 Bestagon), the Omarchy menu's actions after `>`, and a file previewed in
 the glyph look after `/`:
 
-![Holo Earth](screenshots/globe-holo.jpg)
+![Holo Earth](glitch-globe-launcher/preview.jpg)
 
 | | |
 | --- | --- |
-| ![Unicron](screenshots/globe-unicron.jpg) | ![Bestagon](screenshots/globe-hex.jpg) |
-| ![Omarchy commands](screenshots/globe-commands.jpg) | ![File preview](screenshots/globe-files.jpg) |
+| ![Unicron](glitch-globe-launcher/screenshots/globe-unicron.jpg) | ![Bestagon](glitch-globe-launcher/screenshots/globe-hex.jpg) |
+| ![Omarchy commands](glitch-globe-launcher/screenshots/globe-commands.jpg) | ![File preview](glitch-globe-launcher/screenshots/globe-files.jpg) |
 
 **Glitch-Theme-Selector** - the arc and the pills carousels, the whole UI
 in the highlighted theme's colours:
 
 | | |
 | --- | --- |
-| ![Theme selector, arc](screenshots/theme-arc.jpg) | ![Theme selector, pills](screenshots/theme-pills.jpg) |
+| ![Theme selector, arc](glitch-theme-selector/preview.jpg) | ![Theme selector, pills](glitch-theme-selector/screenshots/theme-pills.jpg) |
 
 **Glitch-Background-Selector** - your own folder's wallpapers on the hand
 carousel, the monitor previewing blur fit:
 
-![Background selector](screenshots/background-hand.jpg)
+![Background selector](glitch-background-selector/preview.jpg)
 
 **Glitch-Overview** - Alt+Tab across workspaces: each one live on the
 monitor, what its windows cost (CPU, memory, processes) beside it:
 
 | | |
 | --- | --- |
-| ![Overview, a file manager](screenshots/overview-files.jpg) | ![Overview, two terminals and their load](screenshots/overview-stats.jpg) |
+| ![Overview, a file manager](glitch-overview/preview.jpg) | ![Overview, two terminals and their load](glitch-overview/screenshots/overview-stats.jpg) |
 
 ## Install
 
-Clone it, then install all three or any of them:
+Clone it, then install all four or any of them:
 
 ```sh
 git clone https://github.com/DasPoxy/Glitch-Launcher-Collection.git

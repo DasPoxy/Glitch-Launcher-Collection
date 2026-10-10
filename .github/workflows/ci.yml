@@ -29,8 +29,8 @@ jobs:
 
       - name: Scripts
         run: |
-          bash -n install.sh glitch-globe-launcher/*.sh
-          shellcheck -S warning install.sh glitch-globe-launcher/*.sh
+          bash -n install.sh publish.sh glitch-globe-launcher/*.sh
+          shellcheck -S warning install.sh publish.sh glitch-globe-launcher/*.sh
 
       - name: Plugin manifests
         run: |

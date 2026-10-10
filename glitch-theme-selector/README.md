@@ -1,10 +1,10 @@
 # Glitch-Theme-Selector
 
-![Arc](../screenshots/theme-arc.jpg)
-![Pills](../screenshots/theme-pills.jpg)
+![Arc](preview.jpg)
+![Pills](screenshots/theme-pills.jpg)
 
 An Omarchy theme selector with an old-monitor, matrix / cyberpunk feel - a
-sibling of [Glitch-Globe-Launcher](../glitch-globe-launcher).
+sibling of [Glitch-Globe-Launcher](https://github.com/DasPoxy/glitch-globe-launcher).
 
 - **The monitor**: the highlighted theme's preview on a glowing CRT set,
   materialising as you move to it - plain, or through a grid, glyph or code
@@ -37,13 +37,37 @@ Settings are kept in `~/.config/glitch-theme-selector/settings.json`.
 
 ## Install
 
-Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
-
 ```sh
-./install.sh theme           # add --keys to bind its key too
+omarchy plugin add https://github.com/DasPoxy/glitch-theme-selector --enable
 ```
 
-Open it with `omarchy-shell shell toggle glitch-theme-selector '{}'`.
+Then bind a key for it in `~/.config/hypr/bindings.lua` - for example in
+place of Omarchy's theme menu:
+
+```lua
+hl.unbind("SUPER + SHIFT + CTRL + SPACE")
+o.bind("SUPER + SHIFT + CTRL + SPACE", "Glitch-Theme-Selector", "omarchy-shell shell toggle glitch-theme-selector '{}'")
+```
+
+Or open it with `omarchy-shell shell toggle glitch-theme-selector '{}'`.
+
+Needs Python 3. Optional: `noto-fonts-cjk` for the glyph and rain looks'
+katakana.
+
+It's one of four in
+[Glitch-Launcher-Collection](https://github.com/DasPoxy/Glitch-Launcher-Collection),
+whose installer can add any or all of them and bind their keys for you.
+
+## Uninstall
+
+```sh
+omarchy plugin remove glitch-theme-selector
+```
+
+Then take its lines out of `~/.config/hypr/bindings.lua` - the `hl.unbind`
+too, so Omarchy's own key for it works again. Its settings
+(`~/.config/glitch-theme-selector`) are left; delete them too if you want
+them gone.
 
 ## How it works
 

@@ -1,10 +1,10 @@
 # Glitch-Background-Selector
 
-![Hand carousel, blur fit](../screenshots/background-hand.jpg)
+![Hand carousel, blur fit](preview.jpg)
 
 An Omarchy wallpaper selector with an old-monitor, glitchy matrix / cyberpunk
-feel - a sibling of [Glitch-Theme-Selector](../glitch-theme-selector)
-and [Glitch-Globe-Launcher](../glitch-globe-launcher).
+feel - a sibling of [Glitch-Theme-Selector](https://github.com/DasPoxy/glitch-theme-selector)
+and [Glitch-Globe-Launcher](https://github.com/DasPoxy/glitch-globe-launcher).
 
 - **Your wallpapers, the theme's first**: the current theme's wallpapers
   (yours for it in `~/.config/omarchy/backgrounds/<theme>`, then its own)
@@ -43,13 +43,42 @@ or glitches out to the desktop. Kept in
 
 ## Install
 
-Part of [Glitch-Launcher-Collection](../README.md): from a clone of it,
-
 ```sh
-./install.sh background           # add --keys to bind its key too
+omarchy plugin add https://github.com/DasPoxy/glitch-background-selector --enable
 ```
 
-Open it with `omarchy-shell shell toggle glitch-background-selector '{}'`.
+Then bind a key for it in `~/.config/hypr/bindings.lua` - for example in
+place of Omarchy's background switcher:
+
+```lua
+hl.unbind("SUPER + CTRL + SPACE")
+o.bind("SUPER + CTRL + SPACE", "Glitch-Background-Selector", "omarchy-shell shell toggle glitch-background-selector '{}'")
+```
+
+Or open it with `omarchy-shell shell toggle glitch-background-selector '{}'`.
+
+Needs Python 3 with Pillow (`python-pillow`) for wallpaper colours, fits and
+baked looks. Optional: `noto-fonts-cjk` for the glyph and rain looks'
+katakana.
+
+It's one of four in
+[Glitch-Launcher-Collection](https://github.com/DasPoxy/Glitch-Launcher-Collection),
+whose installer can add any or all of them and bind their keys for you.
+
+## Uninstall
+
+```sh
+omarchy plugin remove glitch-background-selector
+```
+
+Then take its lines out of `~/.config/hypr/bindings.lua` - the `hl.unbind`
+too, so Omarchy's own key for it works again. Its settings
+(`~/.config/glitch-background-selector`) and cache
+(`~/.cache/glitch-background-selector`) are left; delete them
+too if you want them gone.
+
+A baked or rendered wallpaper it set stays your wallpaper; pick another with
+Omarchy's background switcher.
 
 ## How it works
 
