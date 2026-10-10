@@ -7,6 +7,12 @@ the same version). Each release is a git tag; to go to one:
 git checkout v0.1.0-beta.1 && ./install.sh update
 ```
 
+## Unreleased
+
+- **Glitch-Globe-Launcher**: spinning the globe hard could crash the shell.
+  Node icons are now decoded once at a fixed size instead of on every
+  frame, as the tiles shrink and grow with depth.
+
 ## 0.1.0-beta.1 - 2026-10-09
 
 The first tagged release, for testing beyond its author's machine.

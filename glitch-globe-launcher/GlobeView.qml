@@ -1009,10 +1009,21 @@ FocusScope {
                         border.width: node.sel ? 1.5 : 1
                         border.color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, node.sel ? 1 : 0.5)
                     }
-                    IconImage {
+                    // a plain Image with a FIXED sourceSize, not IconImage: IconImage ties
+                    // sourceSize to its width, and the tile resizes every frame with depth,
+                    // so a hard spin fired hundreds of icon lookups at the async loader
+                    // thread (QIcon::fromTheme isn't thread-safe -> shell crash). Fixed at
+                    // 64 = the selected tile's full bulge (34 * 1.9), and the same size the
+                    // detail card asks for, so each icon is decoded once and then cached.
+                    Image {
                         anchors.fill: parent
                         visible: !node.modelData.glyph
                         source: node.modelData.glyph ? "" : Quickshell.iconPath(node.modelData.icon || "", "application-x-executable")
+                        sourceSize.width: 64
+                        sourceSize.height: 64
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
                         asynchronous: true
                     }
                     // the Omarchy menu's rows have a Nerd Font glyph instead
