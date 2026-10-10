@@ -9,7 +9,7 @@ import "eggs.js" as Eggs
 // old CRT monitor showing the highlighted one, its size and colours read out
 // beside it, over a starfield and a nebula tinted by it. The current theme's
 // wallpapers come first, together; then the ones in your folder (options).
-// Arrows browse, T jumps to the theme's wallpapers, W to your folder's, /
+// Arrows or WASD browse, T jumps to the theme's wallpapers, F to your folder's, /
 // filters, Enter sets it (it stays open), Tab changes the monitor's look,
 // Ctrl+T switches the CRT off / on, Ctrl+, opens the options. The screen
 // glitches now and then, a little as you browse, hard when one is set - and
@@ -470,7 +470,8 @@ FocusScope {
 
     // -------------------------------------------------------------- keyboard
     Keys.onPressed: event => {
-        const k = event.key, ctrl = event.modifiers & Qt.ControlModifier
+        let k = event.key
+        const ctrl = event.modifiers & Qt.ControlModifier
         if (settingsOpen) {
             if (k === Qt.Key_Escape || (k === Qt.Key_Comma && ctrl)) { settingsOpen = false; view.forceActiveFocus(); event.accepted = true }
             return
@@ -481,11 +482,13 @@ FocusScope {
             if (k === Qt.Key_Backspace) { if (query) query = query.slice(0, -1); else filtering = false; sel = 0; pos = 0; event.accepted = true; return }
             if (event.text && event.text.length === 1 && event.text >= " " && !ctrl) { query += event.text; sel = 0; pos = 0; event.accepted = true; return }
         }
+        // W A S D browse like the arrows (not with Ctrl; while filtering they type)
+        if (!ctrl) k = ({ [Qt.Key_W]: Qt.Key_Up, [Qt.Key_A]: Qt.Key_Left, [Qt.Key_S]: Qt.Key_Down, [Qt.Key_D]: Qt.Key_Right })[k] || k
         const rowStep = settings.carousel === "grid" ? gridCols : 1
         if (k === Qt.Key_Escape) { if (query) query = ""; else if (closeRequest) closeRequest() }
         else if (k === Qt.Key_Slash && !ctrl) { filtering = true; query = "" }
         else if (k === Qt.Key_T && !ctrl) jumpTo("theme")
-        else if (k === Qt.Key_W && !ctrl) jumpTo("folder")
+        else if (k === Qt.Key_F && !ctrl) jumpTo("folder")
         else if (k === Qt.Key_R && !ctrl) randomPick(!!(event.modifiers & Qt.ShiftModifier))
         else if (k === Qt.Key_Comma && ctrl) settingsOpen = true
         else if (k === Qt.Key_Left) step(-1)
@@ -567,7 +570,7 @@ FocusScope {
             Text {
                 textFormat: Text.PlainText
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: (view.filtering ? "/" + view.query : "> [/] filter   [T] theme   [W] your folder   [R] random") + (cursorBlink.on ? "_" : " ")
+                text: (view.filtering ? "/" + view.query : "> [/] filter   [T] theme   [F] your folder   [R] random") + (cursorBlink.on ? "_" : " ")
                 color: view.filtering ? view.cText : Qt.rgba(view.cText.r, view.cText.g, view.cText.b, 0.45)
                 font.family: view.mono; font.pixelSize: 22
                 Timer { id: cursorBlink; property bool on: true; interval: 530; repeat: true; running: view.active; onTriggered: on = !on }
@@ -963,7 +966,7 @@ FocusScope {
             textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom; anchors.bottomMargin: 26
-            text: "[← →] browse   [T] theme   [W] folder   [R] random   [ENTER] set   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
+            text: "[← → / WASD] browse   [T] theme   [F] folder   [R] random   [ENTER] set   [TAB] look   [CTRL+T] crt " + (view.settings.crt ? "off" : "on") + "   [CTRL+,] options   [/] filter   [ESC] " + (view.query ? "clear" : "exit")
             color: view.cText; opacity: 0.45; font.family: view.mono; font.pixelSize: 12
         }
 

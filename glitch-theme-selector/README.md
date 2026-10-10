@@ -13,8 +13,8 @@ sibling of [Glitch-Globe-Launcher](https://github.com/DasPoxy/glitch-globe-launc
   bottom, in one of nine styles (options): arc (cover flow), line, hand (a
   fanned hand of cards), ring (3D), panorama, triple, grid, pills (thin
   pills in each theme's colours, the highlighted one opening into its card)
-  or blips (a dot per theme, the card risen over its blip). Arrows, the
-  wheel or a click browse; **/** filters; **R** jumps to a random theme
+  or blips (a dot per theme, the card risen over its blip). Arrows, W A S D,
+  the wheel or a click browse; **/** filters; **R** jumps to a random theme
   (**Shift+R** applies a random one straight away).
 - **Options** (Ctrl+, or the button top right): the carousel style, the
   monitor's look, CRT on / off, glitches normal / subtle / off, the open /
