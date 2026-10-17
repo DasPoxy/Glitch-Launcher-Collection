@@ -438,6 +438,7 @@ FocusScope {
         else if (k === Qt.Key_Up) hop(0, -1)
         else if (k === Qt.Key_Down) hop(0, 1)
         else if (k === Qt.Key_Comma && (event.modifiers & Qt.ControlModifier)) settingsOpen = true
+        else if (k === Qt.Key_U && (event.modifiers & Qt.ControlModifier)) openUpdater()
         else if ((k === Qt.Key_Tab || k === Qt.Key_Backtab) && mode === "file") {
             // the preview's look, round and round (Shift+Tab: backwards)
             const looks = ["clean", "grid", "glyph", "rain"], back = k === Qt.Key_Backtab || (event.modifiers & Qt.ShiftModifier)
@@ -448,8 +449,40 @@ FocusScope {
         else return
         event.accepted = true
     }
+    // ------------------------------------------------------- omarchy updates
+    // omarchy-update-available (what the bar's update icon uses) on opening,
+    // at most every few minutes, since it asks the mirrors. Ctrl+U or a
+    // click on the banner opens Omarchy's updater, as the bar icon does.
+    property var updates: []             // its lines: "omarchy 3.1.0-1 -> 3.2.0-1"
+    property real updateCheckedAt: 0
+    function checkUpdates(force) {
+        if (updateProc.running) return
+        if (!force && Date.now() - updateCheckedAt < 300000) return
+        updateCheckedAt = Date.now()
+        updateProc.running = true
+    }
+    function openUpdater() {
+        Quickshell.execDetached(["omarchy-launch-floating-terminal-with-presentation", "omarchy-update"])
+        updateCheckedAt = 0                  // look again next time it opens
+        launched()
+    }
+    readonly property string updateLabel: {
+        if (!updates.length) return ""
+        const m = updates[0].match(/^(\S+) (\S+) -> (\S+)/)
+        if (m) return m[2] + " → " + m[3]
+        const d = updates[0].match(/^omarchy-dev-checkout (.*)$/)
+        return d ? d[1] : updates[0]
+    }
+    Process {
+        id: updateProc
+        command: ["omarchy-update-available"]
+        stdout: StdioCollector { id: updateOut }
+        onExited: code => view.updates = code === 0 ? updateOut.text.split("\n").filter(l => l.trim() !== "") : []
+    }
+    Timer { interval: 21600000; repeat: true; running: true; onTriggered: view.checkUpdates(true) }
+
     // fresh each time it opens
-    onActiveChanged: if (active) { burstPeak = 1; doom = ""; doomT = 0; doomChunks = []; doomSaid = 0; if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
+    onActiveChanged: if (active) { checkUpdates(false); burstPeak = 1; doom = ""; doomT = 0; doomChunks = []; doomSaid = 0; if (settings.style === "random") pickRandomStyle(); query = ""; settingsOpen = false; zoom = 1; idle = 0; aimAt(-1); forceActiveFocus() } else described = ""
 
     // --------------------------------------------------------- the readout
     // linger on something for a few seconds and the corner terminal scans it:
@@ -1249,6 +1282,41 @@ FocusScope {
                     Timer { interval: 18; repeat: true; running: parent.shown < parent.line.length; onTriggered: parent.shown++ }
                 }
             }
+        }
+
+        // an Omarchy update waiting: top left, across from the options button
+        Rectangle {
+            id: updateBanner
+            z: 30
+            visible: view.updates.length > 0
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.margins: 30
+            width: Math.min(updateRow.implicitWidth + 24, parent.width / 2 - 340)
+            height: 32; radius: 4
+            clip: true
+            color: Qt.rgba(view.cPrimary.r, view.cPrimary.g, view.cPrimary.b, updateHover.hovered ? 0.22 : 0.08 + 0.08 * updatePulse.k)
+            border.width: 1
+            border.color: view.cPrimary
+            QtObject { id: updatePulse; property real k: 0 }
+            SequentialAnimation {
+                running: updateBanner.visible && view.active
+                loops: Animation.Infinite
+                NumberAnimation { target: updatePulse; property: "k"; from: 0; to: 1; duration: 900; easing.type: Easing.InOutSine }
+                NumberAnimation { target: updatePulse; property: "k"; from: 1; to: 0; duration: 900; easing.type: Easing.InOutSine }
+            }
+            Row {
+                id: updateRow
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 10
+                Text { textFormat: Text.PlainText; text: "▲ OMARCHY UPDATE"; color: view.cPrimary; font.family: view.mono; font.pixelSize: 13; font.bold: true; font.letterSpacing: 1 }
+                Text { textFormat: Text.PlainText; text: view.updateLabel + (view.updates.length > 1 ? "  +" + (view.updates.length - 1) : ""); color: view.cText; font.family: view.mono; font.pixelSize: 13 }
+                Text { textFormat: Text.PlainText; text: "[CTRL+U] update"; color: view.cText; opacity: 0.55; font.family: view.mono; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+            }
+            HoverHandler { id: updateHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: view.openUpdater() }
         }
 
         // options button

@@ -12,6 +12,9 @@ git checkout v0.1.0-beta.1 && ./install.sh update
 - **Glitch-Globe-Launcher**: spinning the globe hard could crash the shell.
   Node icons are now decoded once at a fixed size instead of on every
   frame, as the tiles shrink and grow with depth.
+- **Glitch-Globe-Launcher**: a waiting Omarchy update shows top left (the
+  same check as the bar's update icon, run on opening); Ctrl+U or a click
+  on it opens Omarchy's updater.
 
 ## 0.1.0-beta.1 - 2026-10-09
 

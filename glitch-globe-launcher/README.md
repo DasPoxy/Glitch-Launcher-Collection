@@ -33,6 +33,9 @@ of being jacked into a terminal.
   its name; a card at the bottom shows its logo and description.
 - **Keyboard**: arrow keys hop to the nearest app that way, typing filters,
   Enter launches, Esc clears the search or closes.
+- **Omarchy updates**: when one is waiting (the same check as the bar's
+  update icon) it shows top left; Ctrl+U or a click on it opens Omarchy's
+  updater.
 - **Opening and closing**: the launcher glitches in over your desktop (captured as it
   opens) in one of the enabled glitch kinds - torn bands, blocks, a rolling
   VHS band, a CRT switching off and on, dripping columns, a negative flash -
