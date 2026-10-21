@@ -307,7 +307,26 @@ FocusScope {
     }
     function apply(b) {
         if (!b) return
-        if (b.path === currentPath && currentFit === (fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill") && currentLook === bakedLook) { terminal.push("> already on screen :: " + b.name); fireGlitch("tear", 0.4 * glitchLevel); return }
+        if (b.path === currentPath && currentFit === (fitModes.indexOf(settings.fit) >= 0 ? settings.fit : "fill") && currentLook === bakedLook) {
+            // nothing to repaint -- but with the live desktop look the effect
+            // is what's being applied: take this picture's colours for it,
+            // and leave the way a new background does (glitching out to the
+            // desktop when that's the setting)
+            if (desktopLook === "live") setSetting("desktopColors", [hexOf(pAccent), hexOf(pSecond), hexOf(Qt.darker(pDark, 1.3))])
+            if (settings.afterApply === "close") {
+                terminal.push(desktopLook === "live" && monitorLook !== "clean" ? "> desktop look :: " + monitorLook + " (live)" : "> already on screen :: " + b.name)
+                if (glitchLevel > 0) {
+                    fireGlitch(["blocks", "vhs", "crt", "bleed", "tear"][Math.floor(Math.random() * 5)], glitchLevel)
+                    stutter.left = 2; stutter.restart()
+                }
+                outAfterApply.interval = 700
+                outAfterApply.restart()
+            } else {
+                terminal.push("> already on screen :: " + b.name)
+                fireGlitch("tear", 0.4 * glitchLevel)
+            }
+            return
+        }
         if (applier.running) return
         applier.name = b.name
         applier.pixels = view.palette.path === b.path && view.palette.w ? view.palette.w * view.palette.h : 3840 * 2160
