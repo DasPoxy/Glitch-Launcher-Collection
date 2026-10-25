@@ -9,6 +9,14 @@ git checkout v0.1.0-beta.1 && ./install.sh update
 
 ## Unreleased
 
+- **Each component is published as a repository of its own**
+  (`publish.sh`), to install one at a time with `omarchy plugin add` or
+  from the plugin marketplace; this collection stays where they're made.
+- **Glitch-Theme-Selector, Glitch-Background-Selector**: W A S D browse
+  like the arrow keys.
+- **Glitch-Background-Selector**: with the live desktop look, applying a
+  look to the wallpaper already on screen now takes effect and glitches out
+  like any other pick, instead of saying "already on screen" and staying.
 - **Glitch-Globe-Launcher**: spinning the globe hard could crash the shell.
   Node icons are now decoded once at a fixed size instead of on every
   frame, as the tiles shrink and grow with depth.

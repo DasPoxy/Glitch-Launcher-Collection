@@ -26,8 +26,8 @@ and [Glitch-Globe-Launcher](https://github.com/DasPoxy/glitch-globe-launcher).
 - **The whole UI wears the highlighted wallpaper's colours**, easing across
   as you browse.
 - **The carousel**: arc, line, hand, ring, panorama, triple, grid, pills or
-  blips (options). Arrows, W A S D, the wheel or a click browse; **/**
-  filters.
+  blips (options). Arrows, W A S D, the wheel or a click browse (Page Up /
+  Down five at a time, Home / End to the ends); **/** filters.
 - **Set it**: Enter (or a click on the highlighted card) runs
   `omarchy theme bg set` - with a hard glitch - and the selector stays open.
 - **The feel**: CRT scanlines and phosphor mask (Ctrl+T), the screen acting

@@ -78,10 +78,29 @@ cd Glitch-Launcher-Collection
 enables it. With `--keys` it also adds its key to
 `~/.config/hypr/bindings.lua` (backed up first), taking it over from the
 Omarchy default listed above (the Omarchy menu moves to Super + Ctrl + Alt +
-Space when the launcher takes Super + Space). Without it, bind them yourself:
+Space when the launcher takes Super + Space). Without it, bind them yourself
+- these are the lines `--keys` writes (keep only the ones you installed):
 
 ```lua
+-- Glitch-Globe-Launcher, in place of the Omarchy menu (which moves to Super + Ctrl + Alt + Space)
+hl.unbind("SUPER + SPACE")
 o.bind("SUPER + SPACE", "Glitch-Globe-Launcher", "omarchy-shell shell toggle glitch-globe-launcher '{}'")
+o.bind("SUPER + CTRL + ALT + SPACE", "Omarchy menu", "omarchy-menu toggle")
+
+-- Glitch-Theme-Selector, in place of Omarchy's theme menu
+hl.unbind("SUPER + SHIFT + CTRL + SPACE")
+o.bind("SUPER + SHIFT + CTRL + SPACE", "Glitch-Theme-Selector", "omarchy-shell shell toggle glitch-theme-selector '{}'")
+
+-- Glitch-Background-Selector, in place of Omarchy's background switcher
+hl.unbind("SUPER + CTRL + SPACE")
+o.bind("SUPER + CTRL + SPACE", "Glitch-Background-Selector", "omarchy-shell shell toggle glitch-background-selector '{}'")
+
+-- Glitch-Overview, in place of Omarchy's window cycling. These must *summon*
+-- it (not toggle), saying which way to step, so Alt+Tab again steps on
+hl.unbind("ALT + TAB")
+o.bind("ALT + TAB", "Glitch-Overview", "omarchy-shell shell summon glitch-overview '{\"alt\":true,\"step\":1}'")
+hl.unbind("ALT + SHIFT + TAB")
+o.bind("ALT + SHIFT + TAB", "Glitch-Overview (back)", "omarchy-shell shell summon glitch-overview '{\"alt\":true,\"step\":-1}'")
 ```
 
 Then:
@@ -94,6 +113,49 @@ Then:
 
 Needs `rsync` and `jq`; the selectors and the overview use Python 3 (the selectors with Pillow), the launcher
 also `fd` and `fzf` for its file search.
+
+## Keys inside each one
+
+All four: **Esc** clears the search (or filter), then closes; **Ctrl+,**
+opens the options (Esc or Ctrl+, again closes them).
+
+**Glitch-Globe-Launcher**
+
+| Key | Does |
+| --- | --- |
+| typing / Backspace | filter the apps; start with `>` for Omarchy commands, `/` for files |
+| ← → ↑ ↓ | hop to the nearest app (or command, or file) that way |
+| Enter | launch it / run the command / open the file |
+| Shift+Enter | run the command in a floating terminal / open the file's folder |
+| Tab / Shift+Tab | (in `/` files) cycle the preview's look: clean, grid, glyph, rain |
+| Ctrl+U | open Omarchy's updater (when an update is waiting) |
+
+**Glitch-Theme-Selector** and **Glitch-Background-Selector**
+
+| Key | Does |
+| --- | --- |
+| ← → ↑ ↓ or W A S D | browse |
+| Page Up / Page Down | five back / on |
+| Home / End | the first / last |
+| / | filter by name (Backspace past the start ends it) |
+| R / Shift+R | jump to a random one / apply a random one straight away |
+| T / F | (background) jump to the theme's wallpapers / your folder's |
+| Tab / Shift+Tab | cycle the monitor's look: clean, grid, glyph, rain |
+| Enter | apply the theme / set the wallpaper |
+| Ctrl+T | CRT on / off |
+
+**Glitch-Overview**
+
+| Key | Does |
+| --- | --- |
+| Alt+Tab / Alt+Shift+Tab | (Alt held) step on / back; let go of Alt to go |
+| Tab / Shift+Tab, ← → or A / D | workspaces |
+| ↑ ↓ or W / S | pick a window in the workspace |
+| 1-9, 0 | jump to workspace 1-9, 10 |
+| Home / End | the first / last workspace |
+| Enter or Space | go there (to the picked window, if one is) |
+| Esc | stay where you are |
+| Ctrl+T | CRT on / off |
 
 ## Uninstall
 

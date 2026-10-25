@@ -21,7 +21,8 @@ sibling of [Glitch-Globe-Launcher](https://github.com/DasPoxy/glitch-globe-launc
 - **The carousel**: every workspace as a small picture of itself, in any of
   the collection's carousel styles (options).
 - **Fully keyboard driven**: Tab / Shift+Tab, ← → or A / D for workspaces,
-  ↑ ↓ or W / S to pick a window in one, 1-9 to jump, Enter or Space to go (to the
+  ↑ ↓ or W / S to pick a window in one, 1-9 (0 for 10) to jump to that
+  workspace, Home / End to the first / last, Enter or Space to go (to the
   window, if one's picked), Esc to stay where you are, Ctrl+T for the CRT,
   Ctrl+, for the options.
 - **The feel**: glitching in over your desktop and out onto the workspace
