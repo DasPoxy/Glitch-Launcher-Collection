@@ -9,6 +9,11 @@ git checkout v0.1.0-beta.1 && ./install.sh update
 
 ## Unreleased
 
+- **Glitch-Overview, Glitch-Globe-Launcher, Glitch-Background-Selector**:
+  follow the Omarchy theme's colours again. Since Qt 6.12 a bare `Color` in
+  QML is Qt's own, so the theme's accent, background and text came back
+  empty: the overview lost its colours, the launcher's "Omarchy" colour
+  theme was blank, and the background selector had no fallback colours.
 - **Each component is published as a repository of its own**
   (`publish.sh`), to install one at a time with `omarchy plugin add` or
   from the plugin marketplace; this collection stays where they're made.

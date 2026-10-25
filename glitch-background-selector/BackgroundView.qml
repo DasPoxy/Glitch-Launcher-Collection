@@ -3,6 +3,9 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+// Omarchy's theme colours, qualified: since Qt 6.12 a bare `Color` is
+// QtQuick's own Color singleton, whose .accent etc. are undefined.
+import qs.Commons as Omarchy
 import "eggs.js" as Eggs
 
 // Glitch-Background-Selector's scene: your wallpapers on a carousel under an
@@ -136,7 +139,7 @@ FocusScope {
     readonly property var pcols: (palette.colors || []).map(h => Qt.color(h))
     // accent: the most vivid colour, lifted if it's too dark to read
     readonly property color pAccent: {
-        if (!pcols.length) return Color.accent
+        if (!pcols.length) return Omarchy.Color.accent
         const c = pcols.slice().sort((a, b) => vivid(b) - vivid(a))[0]
         return lum(c) < 0.35 ? Qt.lighter(c, 1 + (0.35 - lum(c)) * 4) : c
     }
@@ -146,12 +149,12 @@ FocusScope {
         return lum(c) < 0.25 ? Qt.lighter(c, 1.8) : c
     }
     readonly property color pDark: {
-        if (!pcols.length) return Color.background
+        if (!pcols.length) return Omarchy.Color.background
         const c = pcols.slice().sort((a, b) => lum(a) - lum(b))[0]
         return Qt.darker(c, lum(c) > 0.15 ? 3 : 1.4)
     }
     readonly property color pLight: {
-        if (!pcols.length) return Color.foreground
+        if (!pcols.length) return Omarchy.Color.foreground
         const c = pcols.slice().sort((a, b) => lum(b) - lum(a))[0]
         return lum(c) < 0.7 ? Qt.lighter(c, 1 + (0.8 - lum(c)) * 2) : c
     }

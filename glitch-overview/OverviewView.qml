@@ -5,6 +5,9 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.Commons
+// Omarchy's theme colours, qualified: since Qt 6.12 a bare `Color` is
+// QtQuick's own Color singleton, whose .accent etc. are undefined.
+import qs.Commons as Omarchy
 import "eggs.js" as Eggs
 
 // Glitch-Overview's scene: your workspaces on a carousel under an old CRT
@@ -47,10 +50,10 @@ FocusScope {
     Process { running: true; command: ["mkdir", "-p", Quickshell.env("HOME") + "/.config/glitch-overview"] }
 
     // the colours: the running Omarchy theme's
-    readonly property color cPrimary: Color.accent
-    readonly property color cGlow: Qt.darker(Color.accent, 1.5)
-    readonly property color cBg: Color.background
-    readonly property color cText: Color.foreground
+    readonly property color cPrimary: Omarchy.Color.accent
+    readonly property color cGlow: Qt.darker(Omarchy.Color.accent, 1.5)
+    readonly property color cBg: Omarchy.Color.background
+    readonly property color cText: Omarchy.Color.foreground
     readonly property color skyA: cPrimary
     readonly property color skyB: cGlow
     readonly property string mono: Style.font.family || "monospace"

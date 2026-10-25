@@ -4,6 +4,9 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
 import qs.Commons
+// Omarchy's theme colours, qualified: since Qt 6.12 a bare `Color` is
+// QtQuick's own Color singleton, whose .accent etc. are undefined.
+import qs.Commons as Omarchy
 import "eggs.js" as Eggs
 
 // Glitch-Globe-Launcher's scene: a starfield (with traffic), the globe, your apps -
@@ -55,7 +58,7 @@ FocusScope {
         mono:   { name: "Mono",   primary: "#e8e8e8", glow: "#8a8a8a", background: "#040404", text: "#f2f2f2" }
     })
     readonly property var pal: settings.theme === "omarchy"
-        ? { primary: String(Color.accent), glow: String(Color.accent), background: String(Color.background), text: String(Color.foreground) }
+        ? { primary: String(Omarchy.Color.accent), glow: String(Omarchy.Color.accent), background: String(Omarchy.Color.background), text: String(Omarchy.Color.foreground) }
         : settings.theme === "custom" ? settings.custom : (themes[settings.theme] || themes.matrix)
     readonly property color cPrimary: pal.primary
     readonly property color cGlow: pal.glow
